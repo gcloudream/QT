@@ -62,7 +62,6 @@ PCDReader::PCDHeader PCDReader::parseHeader(QFile& file) {
     QString line;
 
     while (!in.atEnd()) {
-        Q_UNUSED(lineStart)
         qint64 lineStart = file.pos();
         line = in.readLine().trimmed();
 
