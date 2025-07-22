@@ -23,8 +23,8 @@ MainWindow::MainWindow(QWidget *parent)
     , m_plotWidget(nullptr)
     , m_stackedWidget(nullptr)
     , m_originalWidget(nullptr)
-    , m_lineViewWidget(nullptr)
     , m_dirModel(nullptr)
+    , m_lineViewWidget(nullptr)
 {
     ui->setupUi(this);
 
@@ -358,6 +358,7 @@ void MainWindow::executeBashScript() {
     // 连接信号槽来处理进程完成事件
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             [this, process](int exitCode, QProcess::ExitStatus status) {
+                Q_UNUSED(status)
                 if (exitCode == 0) {
                     qDebug() << "Python脚本执行完成，退出代码:" << exitCode;
                     qDebug() << "输出:" << process->readAllStandardOutput();

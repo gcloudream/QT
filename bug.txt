@@ -1,0 +1,251 @@
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\config.cpp:166: error: passing 'const QString' as 'this' argument discards qualifiers [-fpermissive]
+..\..\..\demoC3\demoC3\demoC2\config.cpp: In member function 'QString Config::findPythonExecutable() const':
+..\..\..\demoC3\demoC3\demoC2\config.cpp:166:47: error: passing 'const QString' as 'this' argument discards qualifiers [-fpermissive]
+  166 |             QString userPath = pattern.replace("*", qgetenv("USERNAME"));
+      |                                ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Qt\6.7.3\mingw_64\include\QtCore\QString:1: In file included from C:/Qt/6.7.3/mingw_64/include/QtCore/QString:1,
+In file included from C:/Qt/6.7.3/mingw_64/include/QtCore/QString:1,
+                 from ..\..\..\demoC3\demoC3\demoC2\config.h:4,
+                 from ..\..\..\demoC3\demoC3\demoC2\config.cpp:1:
+C:/Qt/6.7.3/mingw_64/include/QtCore/qstring.h:561:14: note:   in call to 'QString& QString::replace(const QString&, const QString&, Qt::CaseSensitivity)'
+  561 |     QString &replace(const QString &before, const QString &after,
+      |              ^~~~~~~
+:-1: error: [Makefile.Release:1852: release/config.o] Error 1
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\LineplotWidget.h:98: warning: 'LineplotWidget::m_plotTitle' will be initialized after [-Wreorder]
+In file included from ..\..\..\demoC3\demoC3\demoC2\lineplotwidget.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\LineplotWidget.h: In constructor 'LineplotWidget::LineplotWidget(QWidget*)':
+..\..\..\demoC3\demoC3\demoC2\LineplotWidget.h:98:13: warning: 'LineplotWidget::m_plotTitle' will be initialized after [-Wreorder]
+   98 |     QString m_plotTitle;
+      |             ^~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\LineplotWidget.h:72: warning:   'double LineplotWidget::m_totalArea' [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\LineplotWidget.h:72:12: warning:   'double LineplotWidget::m_totalArea' [-Wreorder]
+   72 |     double m_totalArea;
+      |            ^~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\lineplotwidget.cpp:220: warning:   when initialized here [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\lineplotwidget.cpp:220:1: warning:   when initialized here [-Wreorder]
+  220 | LineplotWidget::LineplotWidget(QWidget *parent)
+      | ^~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:366: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp: In member function 'void ModelManager::processFace(const aiMesh*, GLenum, const aiFace*)':
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:366:23: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+  366 |             if (index >= mesh->mNumVertices) {
+      |                 ~~~~~~^~~~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:607: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp: In member function 'void ModelManager::renderPolygonFaceFlat(const aiMesh*, GLenum, const aiFace*)':
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:607:23: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+  607 |     for (int i = 0; i < face->mNumIndices; i++) {
+      |                     ~~^~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:611: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:611:19: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+  611 |         if (index >= mesh->mNumVertices) {
+      |             ~~~~~~^~~~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:640: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp: In member function 'void ModelManager::renderPolygonFaceWireframe(const aiMesh*, const aiFace*)':
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:640:23: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+  640 |     for (int i = 0; i < face->mNumIndices; i++) {
+      |                     ~~^~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:642: warning: comparison of integer expressions of different signedness: 'int' and 'unsigned int' [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:642:39: warning: comparison of integer expressions of different signedness: 'int' and 'unsigned int' [-Wsign-compare]
+  642 |         int indexB = face->mIndices[i == face->mNumIndices - 1 ? 0 : i + 1];
+      |                                     ~~^~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\openglwindow.cpp:391: warning: unused parameter 'event' [-Wunused-parameter]
+..\..\..\demoC3\demoC3\demoC2\openglwindow.cpp: In member function 'virtual void OpenglWindow::mouseReleaseEvent(QMouseEvent*)':
+..\..\..\demoC3\demoC3\demoC2\openglwindow.cpp:391:51: warning: unused parameter 'event' [-Wunused-parameter]
+  391 | void OpenglWindow::mouseReleaseEvent(QMouseEvent *event) {
+      |                                      ~~~~~~~~~~~~~^~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:25: error: scoped/unscoped mismatch in enum 'enum DisplayMode'
+In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:25:12: error: scoped/unscoped mismatch in enum 'enum DisplayMode'
+   25 | enum class DisplayMode {
+      |            ^~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:20: In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:20,
+In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:20,
+                 from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\modelmanager.h:19:6: note: previous definition here
+   19 | enum DisplayMode { Wireframe, Flat, Flatlines };
+      |      ^~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:34: error: 'PointCloudOnly' is not a member of 'DisplayMode'
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp: In constructor 'MyQOpenglWidget::MyQOpenglWidget(QWidget*)':
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:34:33: error: 'PointCloudOnly' is not a member of 'DisplayMode'
+   34 |     ,m_displayMode(DisplayMode::PointCloudOnly)
+      |                                 ^~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:127: warning: 'MyQOpenglWidget::m_bShowAxis' will be initialized after [-Wreorder]
+In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:127:10: warning: 'MyQOpenglWidget::m_bShowAxis' will be initialized after [-Wreorder]
+  127 |     bool m_bShowAxis;
+      |          ^~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:118: warning:   'DisplayMode MyQOpenglWidget::m_displayMode' [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:118:17: warning:   'DisplayMode MyQOpenglWidget::m_displayMode' [-Wreorder]
+  118 |     DisplayMode m_displayMode;
+      |                 ^~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:21: warning:   when initialized here [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:21:1: warning:   when initialized here [-Wreorder]
+   21 | MyQOpenglWidget::MyQOpenglWidget(QWidget *parent)
+      | ^~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:224: warning: comparison of integer expressions of different signedness: 'size_t' {aka 'long long unsigned int'} and 'qsizetype' {aka 'long long int'} [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp: In member function 'void MyQOpenglWidget::appendPointCloudData(const std::vector<QVector3D>&)':
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:224:26: warning: comparison of integer expressions of different signedness: 'size_t' {aka 'long long unsigned int'} and 'qsizetype' {aka 'long long int'} [-Wsign-compare]
+  224 |     for (size_t i = 6; i < m_PointsVertex.size(); ++i) {
+      |                        ~~^~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:462: error: 'PointCloudOnly' is not a member of 'DisplayMode'
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp: In member function 'virtual void MyQOpenglWidget::paintGL()':
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:462:27: error: 'PointCloudOnly' is not a member of 'DisplayMode'
+  462 |         case DisplayMode::PointCloudOnly:
+      |                           ^~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:464: error: 'renderPointCloud' was not declared in this scope; did you mean 'clearPointCloud'?
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:464:17: error: 'renderPointCloud' was not declared in this scope; did you mean 'clearPointCloud'?
+  464 |                 renderPointCloud();
+      |                 ^~~~~~~~~~~~~~~~
+      |                 clearPointCloud
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:468: error: 'MeshOnly' is not a member of 'DisplayMode'
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:468:27: error: 'MeshOnly' is not a member of 'DisplayMode'
+  468 |         case DisplayMode::MeshOnly:
+      |                           ^~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:474: error: 'Hybrid' is not a member of 'DisplayMode'
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:474:27: error: 'Hybrid' is not a member of 'DisplayMode'
+  474 |         case DisplayMode::Hybrid:
+      |                           ^~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:476: error: 'renderPointCloud' was not declared in this scope; did you mean 'clearPointCloud'?
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:476:17: error: 'renderPointCloud' was not declared in this scope; did you mean 'clearPointCloud'?
+  476 |                 renderPointCloud();
+      |                 ^~~~~~~~~~~~~~~~
+      |                 clearPointCloud
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:461: warning: enumeration value 'Wireframe' not handled in switch [-Wswitch]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:461:11: warning: enumeration value 'Wireframe' not handled in switch [-Wswitch]
+  461 |     switch(m_displayMode) {
+      |           ^
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:461: warning: enumeration value 'Flat' not handled in switch [-Wswitch]
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:461: warning: enumeration value 'Flatlines' not handled in switch [-Wswitch]
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:486: error: 'renderAxis' was not declared in this scope
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:486:9: error: 'renderAxis' was not declared in this scope
+  486 |         renderAxis();
+      |         ^~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:573: warning: 'QPointF QMouseEvent::localPos() const' is deprecated: Use position() [-Wdeprecated-declarations]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp: In member function 'virtual void MyQOpenglWidget::mousePressEvent(QMouseEvent*)':
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:573:44: warning: 'QPointF QMouseEvent::localPos() const' is deprecated: Use position() [-Wdeprecated-declarations]
+  573 |         m_lastPoint = QVector2D(e->localPos());
+      |                                 ~~~~~~~~~~~^~
+C:\Qt\6.7.3\mingw_64\include\QtGui\QMouseEvent:1: In file included from C:/Qt/6.7.3/mingw_64/include/QtGui/QMouseEvent:1,
+In file included from C:/Qt/6.7.3/mingw_64/include/QtGui/QMouseEvent:1,
+                 from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:15,
+                 from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+C:/Qt/6.7.3/mingw_64/include/QtGui/qevent.h:234:13: note: declared here
+  234 |     QPointF localPos() const { return position(); }
+      |             ^~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:581: warning: 'QPointF QMouseEvent::localPos() const' is deprecated: Use position() [-Wdeprecated-declarations]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp: In member function 'virtual void MyQOpenglWidget::mouseMoveEvent(QMouseEvent*)':
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:581:61: warning: 'QPointF QMouseEvent::localPos() const' is deprecated: Use position() [-Wdeprecated-declarations]
+  581 |         Rotate(QVector2D(m_lastPoint), QVector2D(e->localPos()));
+      |                                                  ~~~~~~~~~~~^~
+C:\Qt\6.7.3\mingw_64\include\QtGui\QMouseEvent:1: In file included from C:/Qt/6.7.3/mingw_64/include/QtGui/QMouseEvent:1,
+In file included from C:/Qt/6.7.3/mingw_64/include/QtGui/QMouseEvent:1,
+                 from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:15,
+                 from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+C:/Qt/6.7.3/mingw_64/include/QtGui/qevent.h:234:13: note: declared here
+  234 |     QPointF localPos() const { return position(); }
+      |             ^~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:585: warning: 'QPointF QMouseEvent::localPos() const' is deprecated: Use position() [-Wdeprecated-declarations]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:585:52: warning: 'QPointF QMouseEvent::localPos() const' is deprecated: Use position() [-Wdeprecated-declarations]
+  585 |         LineMove(m_lastPoint, QVector2D(e->localPos()));
+      |                                         ~~~~~~~~~~~^~
+C:\Qt\6.7.3\mingw_64\include\QtGui\QMouseEvent:1: In file included from C:/Qt/6.7.3/mingw_64/include/QtGui/QMouseEvent:1,
+In file included from C:/Qt/6.7.3/mingw_64/include/QtGui/QMouseEvent:1,
+                 from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:15,
+                 from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+C:/Qt/6.7.3/mingw_64/include/QtGui/qevent.h:234:13: note: declared here
+  234 |     QPointF localPos() const { return position(); }
+      |             ^~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:587: warning: 'QPointF QMouseEvent::localPos() const' is deprecated: Use position() [-Wdeprecated-declarations]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:587:40: warning: 'QPointF QMouseEvent::localPos() const' is deprecated: Use position() [-Wdeprecated-declarations]
+  587 |     m_lastPoint = QVector2D(e->localPos());
+      |                             ~~~~~~~~~~~^~
+C:\Qt\6.7.3\mingw_64\include\QtGui\QMouseEvent:1: In file included from C:/Qt/6.7.3/mingw_64/include/QtGui/QMouseEvent:1,
+In file included from C:/Qt/6.7.3/mingw_64/include/QtGui/QMouseEvent:1,
+                 from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:15,
+                 from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+C:/Qt/6.7.3/mingw_64/include/QtGui/qevent.h:234:13: note: declared here
+  234 |     QPointF localPos() const { return position(); }
+      |             ^~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:590: warning: unused parameter 'e' [-Wunused-parameter]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp: In member function 'virtual void MyQOpenglWidget::mouseReleaseEvent(QMouseEvent*)':
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:590:54: warning: unused parameter 'e' [-Wunused-parameter]
+  590 | void MyQOpenglWidget::mouseReleaseEvent(QMouseEvent *e)
+      |                                         ~~~~~~~~~~~~~^
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:722: error: no declaration matches 'void MyQOpenglWidget::renderPointCloud()'
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp: At global scope:
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:722:6: error: no declaration matches 'void MyQOpenglWidget::renderPointCloud()'
+  722 | void MyQOpenglWidget::renderPointCloud()
+      |      ^~~~~~~~~~~~~~~
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:722:6: note: no functions named 'void MyQOpenglWidget::renderPointCloud()'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1: In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:39:7: note: 'class MyQOpenglWidget' defined here
+   39 | class MyQOpenglWidget: public QOpenGLWidget, protected QOpenGLFunctions
+      |       ^~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:735: error: no declaration matches 'void MyQOpenglWidget::renderAxis()'
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:735:6: error: no declaration matches 'void MyQOpenglWidget::renderAxis()'
+  735 | void MyQOpenglWidget::renderAxis()
+      |      ^~~~~~~~~~~~~~~
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:735:6: note: no functions named 'void MyQOpenglWidget::renderAxis()'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1: In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:39:7: note: 'class MyQOpenglWidget' defined here
+   39 | class MyQOpenglWidget: public QOpenGLWidget, protected QOpenGLFunctions
+      |       ^~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\pcdreader.cpp:65: warning: unused variable 'lineStart' [-Wunused-variable]
+..\..\..\demoC3\demoC3\demoC2\pcdreader.cpp: In static member function 'static PCDReader::PCDHeader PCDReader::parseHeader(QFile&)':
+..\..\..\demoC3\demoC3\demoC2\pcdreader.cpp:65:16: warning: unused variable 'lineStart' [-Wunused-variable]
+   65 |         qint64 lineStart = file.pos();
+      |                ^~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\pcdreader.cpp:262: warning: unused parameter 'header' [-Wunused-parameter]
+..\..\..\demoC3\demoC3\demoC2\pcdreader.cpp: In static member function 'static QByteArray PCDReader::tryLZ4Decompression(const QByteArray&, const PCDReader::PCDHeader&)':
+..\..\..\demoC3\demoC3\demoC2\pcdreader.cpp:262:84: warning: unused parameter 'header' [-Wunused-parameter]
+  262 | QByteArray PCDReader::tryLZ4Decompression(const QByteArray& data, const PCDHeader& header) {
+      |                                                                   ~~~~~~~~~~~~~~~~~^~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:25: error: scoped/unscoped mismatch in enum 'enum DisplayMode'
+In file included from ..\..\..\demoC3\demoC3\demoC2\mainwindow.h:11,
+                 from ..\..\..\demoC3\demoC3\demoC2\main.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:25:12: error: scoped/unscoped mismatch in enum 'enum DisplayMode'
+   25 | enum class DisplayMode {
+      |            ^~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:20: In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:20,
+In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:20,
+                 from ..\..\..\demoC3\demoC3\demoC2\mainwindow.h:11,
+                 from ..\..\..\demoC3\demoC3\demoC2\main.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\modelmanager.h:19:6: note: previous definition here
+   19 | enum DisplayMode { Wireframe, Flat, Flatlines };
+      |      ^~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:25: error: scoped/unscoped mismatch in enum 'enum DisplayMode'
+In file included from ..\..\..\demoC3\demoC3\demoC2\mainwindow.h:11,
+                 from ..\..\..\demoC3\demoC3\demoC2\mainwindow.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:25:12: error: scoped/unscoped mismatch in enum 'enum DisplayMode'
+   25 | enum class DisplayMode {
+      |            ^~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:20: In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:20,
+In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:20,
+                 from ..\..\..\demoC3\demoC3\demoC2\mainwindow.h:11,
+                 from ..\..\..\demoC3\demoC3\demoC2\mainwindow.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\modelmanager.h:19:6: note: previous definition here
+   19 | enum DisplayMode { Wireframe, Flat, Flatlines };
+      |      ^~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\mainwindow.h:100: warning: 'MainWindow::m_lineViewWidget' will be initialized after [-Wreorder]
+In file included from ..\..\..\demoC3\demoC3\demoC2\mainwindow.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\mainwindow.h: In constructor 'MainWindow::MainWindow(QWidget*)':
+..\..\..\demoC3\demoC3\demoC2\mainwindow.h:100:14: warning: 'MainWindow::m_lineViewWidget' will be initialized after [-Wreorder]
+  100 |     QWidget *m_lineViewWidget;
+      |              ^~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\mainwindow.h:94: warning:   'QFileSystemModel* MainWindow::m_dirModel' [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\mainwindow.h:94:23: warning:   'QFileSystemModel* MainWindow::m_dirModel' [-Wreorder]
+   94 |     QFileSystemModel* m_dirModel;
+      |                       ^~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\mainwindow.cpp:20: warning:   when initialized here [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\mainwindow.cpp:20:1: warning:   when initialized here [-Wreorder]
+   20 | MainWindow::MainWindow(QWidget *parent)
+      | ^~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\mainwindow.cpp:360: warning: unused parameter 'status' [-Wunused-parameter]
+..\..\..\demoC3\demoC3\demoC2\mainwindow.cpp: In lambda function:
+..\..\..\demoC3\demoC3\demoC2\mainwindow.cpp:360:64: warning: unused parameter 'status' [-Wunused-parameter]
+  360 |             [this, process](int exitCode, QProcess::ExitStatus status) {
+      |                                           ~~~~~~~~~~~~~~~~~~~~~^~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:25: error: Enumeration previously declared as unscoped
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:86: warning: 'MyQOpenglWidget::enterEvent' hides overloaded virtual function

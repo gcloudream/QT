@@ -22,7 +22,7 @@
 using namespace std;
 
 // 显示模式枚举
-enum class DisplayMode {
+enum class ViewMode {
     PointCloudOnly,
     MeshOnly,
     Hybrid
@@ -51,8 +51,8 @@ public:
     // 新增mesh功能
     bool loadMeshModel(const QString& modelPath);
     void clearMeshModel();
-    void setDisplayMode(DisplayMode mode);
-    DisplayMode getDisplayMode() const;
+    void setViewMode(ViewMode mode);
+    ViewMode getViewMode() const;
     
     // 渲染控制
     void setMeshVisible(bool visible);
@@ -115,7 +115,7 @@ private:
     MinBoundingBox m_box;
 
     // mesh渲染相关
-    DisplayMode m_displayMode;
+    ViewMode m_viewMode;
     bool m_meshVisible;
     bool m_pointCloudVisible;
     ModelManager* m_modelManager;
@@ -137,6 +137,10 @@ private:
     void Rotate(QVector2D posOrgin, QVector2D posEnd);
     void modelZoomInOrOut(bool ZoomInOrOut);
     QVector3D pixelPosToViewPos(const QVector2D& p);
+    
+    // 渲染函数声明
+    void renderPointCloud();
+    void renderAxis();
     void calRotation(QVector2D posOrgin, QVector2D posEnd);
     void initPointCloud(const std::vector<QVector3D>& cloud);
     void gray2Pseudocolor(const QVector3D pos, float color[4]);

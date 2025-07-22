@@ -389,6 +389,7 @@ void OpenglWindow::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void OpenglWindow::mouseReleaseEvent(QMouseEvent *event) {
+    Q_UNUSED(event)
     if (modelManager->transformMode == Rotation) {
         rotateAngleHoriFi += rotateAngleHori;
         rotateAngleHori = 0;

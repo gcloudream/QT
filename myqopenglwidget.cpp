@@ -30,11 +30,11 @@ MyQOpenglWidget::MyQOpenglWidget(QWidget *parent)
     ,m_VBO(0)
     ,m_VAO(nullptr)
     ,m_scale(1.0f)
-    ,m_bShowAxis(false)
-    ,m_displayMode(DisplayMode::PointCloudOnly)
+    ,m_viewMode(ViewMode::PointCloudOnly)
     ,m_meshVisible(true)
     ,m_pointCloudVisible(true)
     ,m_modelManager(nullptr)
+    ,m_bShowAxis(false)
 {
     m_Timer = new QTimer;
     // m_context.reset(new QOpenGLContext());
@@ -458,20 +458,20 @@ void MyQOpenglWidget::paintGL()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     // 根据显示模式选择渲染内容
-    switch(m_displayMode) {
-        case DisplayMode::PointCloudOnly:
+    switch(m_viewMode) {
+        case ViewMode::PointCloudOnly:
             if (m_pointCloudVisible) {
                 renderPointCloud();
             }
             break;
             
-        case DisplayMode::MeshOnly:
+        case ViewMode::MeshOnly:
             if (m_meshVisible) {
                 renderMesh();
             }
             break;
             
-        case DisplayMode::Hybrid:
+        case ViewMode::Hybrid:
             if (m_pointCloudVisible) {
                 renderPointCloud();
             }
@@ -570,7 +570,7 @@ void MyQOpenglWidget::mousePressEvent(QMouseEvent *e)
     if (e->buttons()&Qt::LeftButton || e->buttons()&Qt::MiddleButton)
     {
         setMouseTracking(true);
-        m_lastPoint = QVector2D(e->localPos());
+        m_lastPoint = QVector2D(e->position());
     }
 }
 
@@ -578,17 +578,18 @@ void MyQOpenglWidget::mouseMoveEvent(QMouseEvent *e)
 {
     if (e->buttons()&Qt::LeftButton)
     {
-        Rotate(QVector2D(m_lastPoint), QVector2D(e->localPos()));
+        Rotate(QVector2D(m_lastPoint), QVector2D(e->position()));
     }
     if (e->buttons()&Qt::MiddleButton)
     {
-        LineMove(m_lastPoint, QVector2D(e->localPos()));
+        LineMove(m_lastPoint, QVector2D(e->position()));
     }
-    m_lastPoint = QVector2D(e->localPos());
+    m_lastPoint = QVector2D(e->position());
 }
 
 void MyQOpenglWidget::mouseReleaseEvent(QMouseEvent *e)
 {
+    Q_UNUSED(e)
     setMouseTracking(false);
 }
 
@@ -802,15 +803,15 @@ void MyQOpenglWidget::clearMeshModel()
     update();
 }
 
-void MyQOpenglWidget::setDisplayMode(DisplayMode mode)
+void MyQOpenglWidget::setViewMode(ViewMode mode)
 {
-    m_displayMode = mode;
+    m_viewMode = mode;
     update();
 }
 
-DisplayMode MyQOpenglWidget::getDisplayMode() const
+ViewMode MyQOpenglWidget::getViewMode() const
 {
-    return m_displayMode;
+    return m_viewMode;
 }
 
 void MyQOpenglWidget::setMeshVisible(bool visible)

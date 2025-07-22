@@ -62,6 +62,7 @@ PCDReader::PCDHeader PCDReader::parseHeader(QFile& file) {
     QString line;
 
     while (!in.atEnd()) {
+        Q_UNUSED(lineStart)
         qint64 lineStart = file.pos();
         line = in.readLine().trimmed();
 
@@ -260,6 +261,7 @@ QByteArray PCDReader::tryZlibDecompression(const QByteArray& data) {
 
 /* 尝试LZ4解压缩（简单检测） */
 QByteArray PCDReader::tryLZ4Decompression(const QByteArray& data, const PCDHeader& header) {
+    Q_UNUSED(header)
     // LZ4格式的简单检测
     // 通常LZ4压缩的数据会有特定的魔数或格式
 

@@ -163,7 +163,7 @@ QString Config::findPythonExecutable() const {
         // 简化的通配符搜索
         QDir dir("C:/");
         if (pattern.contains("Users")) {
-            QString userPath = pattern.replace("*", qgetenv("USERNAME"));
+            QString userPath = QString(pattern).replace("*", qgetenv("USERNAME"));
             if (QFile::exists(userPath)) {
                 return userPath;
             }
