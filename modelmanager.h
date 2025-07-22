@@ -2,13 +2,13 @@
 #define MODELMANAGER_H
 
 #include <gl/freeglut.h>
+#include <GL/glew.h>
 #include <IL/il.h>
 
 #include <assimp/cimport.h>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 
-#include <fstream>
 #include <string.h>
 #include <map>
 #include <iostream>

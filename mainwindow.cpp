@@ -20,10 +20,10 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , m_dirModel(nullptr)
     , m_plotWidget(nullptr)
     , m_stackedWidget(nullptr)
     , m_originalWidget(nullptr)
-    , m_dirModel(nullptr)
     , m_lineViewWidget(nullptr)
 {
     ui->setupUi(this);
@@ -1042,7 +1042,6 @@ std::vector<QVector3D> MainWindow::ReadVec3PointCloudPLY(QString path)
 
     QTextStream in(&file);
     QString line;
-    bool isVertexSection = false;
     int vertexCount = 0;
     int readCount = 0;
 

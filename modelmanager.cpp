@@ -371,7 +371,7 @@ void ModelManager::processFace(const struct aiMesh* mesh, GLenum face_mode, cons
             int index = face->mIndices[i];
 
             // 检查索引是否有效
-            if (index >= mesh->mNumVertices) {
+            if (static_cast<unsigned int>(index) >= mesh->mNumVertices) {
                 cout << "Error: Invalid vertex index " << index << endl;
                 return;
             }
@@ -612,11 +612,11 @@ void ModelManager::renderPolygonFaceFlat(const struct aiMesh* mesh, GLenum face_
 
     glBegin(face_mode);
 
-    for (int i = 0; i < face->mNumIndices; i++) {
+    for (unsigned int i = 0; i < face->mNumIndices; i++) {
         int index = face->mIndices[i];
 
         // 检查索引是否有效
-        if (index >= mesh->mNumVertices) {
+        if (static_cast<unsigned int>(index) >= mesh->mNumVertices) {
             cout << "Error: Invalid vertex index " << index << endl;
             continue;
         }
@@ -645,7 +645,7 @@ void ModelManager::renderPolygonFaceFlat(const struct aiMesh* mesh, GLenum face_
 
 void ModelManager::renderPolygonFaceWireframe(const struct aiMesh* mesh, const struct aiFace* face) {
     //遍历所有顶点，每两个顶点之间连线
-    for (int i = 0; i < face->mNumIndices; i++) {
+    for (unsigned int i = 0; i < face->mNumIndices; i++) {
         int indexA = face->mIndices[i];
         int indexB = face->mIndices[i == face->mNumIndices - 1 ? 0 : i + 1];
 
@@ -835,7 +835,7 @@ void ModelManager::processFaceWithShader(const struct aiMesh* mesh, const struct
         int index = face->mIndices[i];
         
         // 检查索引是否有效
-        if (index >= mesh->mNumVertices) {
+        if (static_cast<unsigned int>(index) >= mesh->mNumVertices) {
             return;
         }
         

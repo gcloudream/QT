@@ -62,7 +62,7 @@ PCDReader::PCDHeader PCDReader::parseHeader(QFile& file) {
     QString line;
 
     while (!in.atEnd()) {
-        qint64 lineStart = file.pos();
+        Q_UNUSED(file.pos());
         line = in.readLine().trimmed();
 
         if (line.isEmpty() || line.startsWith("#")) {

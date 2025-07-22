@@ -220,8 +220,8 @@ bool LineplotWidget::isPointEqual(const QPointF &p1, const QPointF &p2, double t
 LineplotWidget::LineplotWidget(QWidget *parent)
     : QWidget(parent)
     , m_minX(0), m_maxX(0), m_minY(0), m_maxY(0)
-    , m_margin(80)
     , m_totalArea(0.0)  // 新增：初始化总面积
+    , m_margin(80)
     , m_plotTitle("平面图线条显示 (单位: 米)")
 {
     setupUI();

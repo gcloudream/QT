@@ -65,8 +65,8 @@ MyQOpenglWidget::MyQOpenglWidget(QWidget *parent)
     ,m_matrixUniform(0)
     ,m_VBO(0)
     ,m_VAO(nullptr)
-    ,m_scale(1.0f)
     ,m_viewMode(ViewMode::PointCloudOnly)
+    ,m_scale(1.0f)
     ,m_meshVisible(true)
     ,m_pointCloudVisible(true)
     ,m_modelManager(nullptr)
@@ -263,7 +263,7 @@ void MyQOpenglWidget::appendPointCloudData(const std::vector<QVector3D> &cloud)
 
     // 计算所有点的包围盒
     std::vector<QVector3D> allPoints;
-    for (size_t i = 6; i < m_PointsVertex.size(); ++i) {
+    for (qsizetype i = 6; i < m_PointsVertex.size(); ++i) {
         allPoints.emplace_back(m_PointsVertex[i].pos[0],
                                m_PointsVertex[i].pos[1],
                                m_PointsVertex[i].pos[2]);

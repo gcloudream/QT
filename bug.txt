@@ -1,14 +1,113 @@
-C:\Users\18438\Desktop\demoC3\demoC3\demoC2\pcdreader.cpp:65: error: 'lineStart' was not declared in this scope
-In file included from C:/Qt/6.7.3/mingw_64/include/QtCore/qglobal.h:28,
-                 from C:/Qt/6.7.3/mingw_64/include/QtCore/QtCore:4,
-                 from ..\..\..\demoC3\demoC3\demoC2\PCDReader.h:4,
-                 from ..\..\..\demoC3\demoC3\demoC2\pcdreader.cpp:1:
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\LineplotWidget.h:97: warning: 'LineplotWidget::m_margin' will be initialized after [-Wreorder]
+In file included from ..\..\..\demoC3\demoC3\demoC2\lineplotwidget.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\LineplotWidget.h: In constructor 'LineplotWidget::LineplotWidget(QWidget*)':
+..\..\..\demoC3\demoC3\demoC2\LineplotWidget.h:97:9: warning: 'LineplotWidget::m_margin' will be initialized after [-Wreorder]
+   97 |     int m_margin;
+      |         ^~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\LineplotWidget.h:72: warning:   'double LineplotWidget::m_totalArea' [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\LineplotWidget.h:72:12: warning:   'double LineplotWidget::m_totalArea' [-Wreorder]
+   72 |     double m_totalArea;
+      |            ^~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\lineplotwidget.cpp:220: warning:   when initialized here [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\lineplotwidget.cpp:220:1: warning:   when initialized here [-Wreorder]
+  220 | LineplotWidget::LineplotWidget(QWidget *parent)
+      | ^~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:374: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp: In member function 'void ModelManager::processFace(const aiMesh*, GLenum, const aiFace*)':
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:374:23: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+  374 |             if (index >= mesh->mNumVertices) {
+      |                 ~~~~~~^~~~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:615: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp: In member function 'void ModelManager::renderPolygonFaceFlat(const aiMesh*, GLenum, const aiFace*)':
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:615:23: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+  615 |     for (int i = 0; i < face->mNumIndices; i++) {
+      |                     ~~^~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:619: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:619:19: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+  619 |         if (index >= mesh->mNumVertices) {
+      |             ~~~~~~^~~~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:648: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp: In member function 'void ModelManager::renderPolygonFaceWireframe(const aiMesh*, const aiFace*)':
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:648:23: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+  648 |     for (int i = 0; i < face->mNumIndices; i++) {
+      |                     ~~^~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:650: warning: comparison of integer expressions of different signedness: 'int' and 'unsigned int' [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:650:39: warning: comparison of integer expressions of different signedness: 'int' and 'unsigned int' [-Wsign-compare]
+  650 |         int indexB = face->mIndices[i == face->mNumIndices - 1 ? 0 : i + 1];
+      |                                     ~~^~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:838: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp: In member function 'void ModelManager::processFaceWithShader(const aiMesh*, const aiFace*, GLuint, GLuint)':
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:838:19: warning: comparison of integer expressions of different signedness: 'int' and 'const unsigned int' [-Wsign-compare]
+  838 |         if (index >= mesh->mNumVertices) {
+      |             ~~~~~~^~~~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:874: error: 'glEnableVertexAttribArray' was not declared in this scope
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:874:5: error: 'glEnableVertexAttribArray' was not declared in this scope
+  874 |     glEnableVertexAttribArray(posAttr);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:875: error: 'glVertexAttribPointer' was not declared in this scope; did you mean 'glVertexPointer'?
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:875:5: error: 'glVertexAttribPointer' was not declared in this scope; did you mean 'glVertexPointer'?
+  875 |     glVertexAttribPointer(posAttr, 3, GL_FLOAT, GL_FALSE, 0, vertices);
+      |     ^~~~~~~~~~~~~~~~~~~~~
+      |     glVertexPointer
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:884: error: 'glDisableVertexAttribArray' was not declared in this scope
+..\..\..\demoC3\demoC3\demoC2\modelmanager.cpp:884:5: error: 'glDisableVertexAttribArray' was not declared in this scope
+  884 |     glDisableVertexAttribArray(posAttr);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:140: warning: 'MyQOpenglWidget::m_scale' will be initialized after [-Wreorder]
+In file included from ..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h: In constructor 'MyQOpenglWidget::MyQOpenglWidget(QWidget*)':
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:140:11: warning: 'MyQOpenglWidget::m_scale' will be initialized after [-Wreorder]
+  140 |     float m_scale;
+      |           ^~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.h:132: warning:   'ViewMode MyQOpenglWidget::m_viewMode' [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.h:132:14: warning:   'ViewMode MyQOpenglWidget::m_viewMode' [-Wreorder]
+  132 |     ViewMode m_viewMode;
+      |              ^~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:56: warning:   when initialized here [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:56:1: warning:   when initialized here [-Wreorder]
+   56 | MyQOpenglWidget::MyQOpenglWidget(QWidget *parent)
+      | ^~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\myqopenglwidget.cpp:266: warning: comparison of integer expressions of different signedness: 'size_t' {aka 'long long unsigned int'} and 'qsizetype' {aka 'long long int'} [-Wsign-compare]
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp: In member function 'void MyQOpenglWidget::appendPointCloudData(const std::vector<QVector3D>&)':
+..\..\..\demoC3\demoC3\demoC2\myqopenglwidget.cpp:266:26: warning: comparison of integer expressions of different signedness: 'size_t' {aka 'long long unsigned int'} and 'qsizetype' {aka 'long long int'} [-Wsign-compare]
+  266 |     for (size_t i = 6; i < m_PointsVertex.size(); ++i) {
+      |                        ~~^~~~~~~~~~~~~~~~~~~~~~~
+:-1: error: [Makefile.Release:3299: release/modelmanager.o] Error 1
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\pcdreader.cpp:65: warning: unused variable 'lineStart' [-Wunused-variable]
 ..\..\..\demoC3\demoC3\demoC2\pcdreader.cpp: In static member function 'static PCDReader::PCDHeader PCDReader::parseHeader(QFile&)':
-..\..\..\demoC3\demoC3\demoC2\pcdreader.cpp:65:18: error: 'lineStart' was not declared in this scope
-   65 |         Q_UNUSED(lineStart)
-      |                  ^~~~~~~~~
-C:/Qt/6.7.3/mingw_64/include/QtCore/qtpreprocessorsupport.h:20:27: note: in definition of macro 'Q_UNUSED'
-   20 | #define Q_UNUSED(x) (void)x;
-      |                           ^
-:-1: error: [Makefile.Release:4180: release/pcdreader.o] Error 1
-C:\Users\18438\Desktop\demoC3\demoC3\demoC2\pcdreader.cpp:65: error: Use of undeclared identifier 'lineStart'
+..\..\..\demoC3\demoC3\demoC2\pcdreader.cpp:65:16: warning: unused variable 'lineStart' [-Wunused-variable]
+   65 |         qint64 lineStart = file.pos();
+      |                ^~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\mainwindow.h:98: warning: 'MainWindow::m_originalWidget' will be initialized after [-Wreorder]
+In file included from ..\..\..\demoC3\demoC3\demoC2\mainwindow.cpp:1:
+..\..\..\demoC3\demoC3\demoC2\mainwindow.h: In constructor 'MainWindow::MainWindow(QWidget*)':
+..\..\..\demoC3\demoC3\demoC2\mainwindow.h:98:14: warning: 'MainWindow::m_originalWidget' will be initialized after [-Wreorder]
+   98 |     QWidget *m_originalWidget;
+      |              ^~~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\mainwindow.h:93: warning:   'QFileSystemModel* MainWindow::m_dirModel' [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\mainwindow.h:93:23: warning:   'QFileSystemModel* MainWindow::m_dirModel' [-Wreorder]
+   93 |     QFileSystemModel* m_dirModel;
+      |                       ^~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\mainwindow.cpp:20: warning:   when initialized here [-Wreorder]
+..\..\..\demoC3\demoC3\demoC2\mainwindow.cpp:20:1: warning:   when initialized here [-Wreorder]
+   20 | MainWindow::MainWindow(QWidget *parent)
+      | ^~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\mainwindow.cpp:1045: warning: variable 'isVertexSection' set but not used [-Wunused-but-set-variable]
+..\..\..\demoC3\demoC3\demoC2\mainwindow.cpp: In member function 'std::vector<QVector3D> MainWindow::ReadVec3PointCloudPLY(QString)':
+..\..\..\demoC3\demoC3\demoC2\mainwindow.cpp:1045:10: warning: variable 'isVertexSection' set but not used [-Wunused-but-set-variable]
+ 1045 |     bool isVertexSection = false;
+      |          ^~~~~~~~~~~~~~~
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:374: warning: Comparison of integers of different signs: 'int' and 'const unsigned int'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:615: warning: Comparison of integers of different signs: 'int' and 'const unsigned int'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:619: warning: Comparison of integers of different signs: 'int' and 'const unsigned int'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:648: warning: Comparison of integers of different signs: 'int' and 'const unsigned int'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:650: warning: Comparison of integers of different signs: 'int' and 'unsigned int'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:874: error: Use of undeclared identifier 'glEnableVertexAttribArray'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:875: error: Use of undeclared identifier 'glVertexAttribPointer'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:877: error: Use of undeclared identifier 'glEnableVertexAttribArray'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:878: error: Use of undeclared identifier 'glVertexAttribPointer'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:884: error: Use of undeclared identifier 'glDisableVertexAttribArray'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:885: error: Use of undeclared identifier 'glDisableVertexAttribArray'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:838: warning: Comparison of integers of different signs: 'int' and 'const unsigned int'
+C:\Users\18438\Desktop\demoC3\demoC3\demoC2\modelmanager.cpp:14: warning: Included header fstream is not used directly (fix available)
+https://clangd.llvm.org/guides/include-cleaner
