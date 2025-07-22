@@ -1,5 +1,6 @@
 #include "modelmanager.h"
 #include <gl/freeglut.h>
+#include <QOpenGLFunctions>
 #include <IL/ilu.h>  // 新增此行
 
 #include <assimp/cimport.h>
@@ -11,7 +12,6 @@
 #include <QDir>
 
 #include <iostream>
-#include <fstream>
 #include <assimp/Importer.hpp>
 
 #define MIN(x,y) ((x)<(y)?(x):(y))
@@ -37,7 +37,12 @@ ModelManager::ModelManager() {
     shadingMode = Gouraud;
     transformMode = Rotation;
     subdivisionDepth = 0;
+}
 
+void ModelManager::initializeGL() {
+    // Initialize OpenGL functions
+    initializeOpenGLFunctions();
+    
     // 添加OpenGL状态初始化
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);

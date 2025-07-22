@@ -1,9 +1,8 @@
 #ifndef MYQOPENGLWIDGET_H
 #define MYQOPENGLWIDGET_H
 
-// GLEW must be included before any other OpenGL headers
+// Use Qt's OpenGL support instead of GLEW
 #include <gl/freeglut.h>
-#include <GL/glew.h>
 
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLFunctions>

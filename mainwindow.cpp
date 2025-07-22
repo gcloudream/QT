@@ -1064,7 +1064,6 @@ std::vector<QVector3D> MainWindow::ReadVec3PointCloudPLY(QString path)
                 vertexCount = parts[2].toInt();
             }
         } else if (line.startsWith("end_header")) {
-            isVertexSection = true;
             break;
         }
     }

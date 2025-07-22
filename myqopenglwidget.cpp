@@ -66,9 +66,9 @@ MyQOpenglWidget::MyQOpenglWidget(QWidget *parent)
     ,m_VBO(0)
     ,m_VAO(nullptr)
     ,m_viewMode(ViewMode::PointCloudOnly)
-    ,m_scale(1.0f)
     ,m_meshVisible(true)
     ,m_pointCloudVisible(true)
+    ,m_scale(1.0f)
     ,m_modelManager(nullptr)
     ,m_bShowAxis(false)
 {
@@ -202,6 +202,11 @@ void MyQOpenglWidget::initializeGL()
     //init need import a point data
     initCloud();
     changePointCloud();
+
+    // 初始化ModelManager的OpenGL
+    if (m_modelManager) {
+        m_modelManager->initializeGL();
+    }
 
     QObject::connect(m_Timer, SIGNAL(timeout()), this, SLOT(onTimerOut()));
     m_Timer->start(30);
@@ -900,6 +905,8 @@ void MyQOpenglWidget::clearMeshModel()
         // ModelManager应该提供清理函数，这里暂时用重新初始化
         delete m_modelManager;
         m_modelManager = new ModelManager();
+        // 重新初始化OpenGL
+        m_modelManager->initializeGL();
     }
     update();
 }

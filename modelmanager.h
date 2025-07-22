@@ -1,6 +1,10 @@
 #ifndef MODELMANAGER_H
 #define MODELMANAGER_H
 
+// Use Qt's OpenGL support for OpenGL types  
+#include <QtGui/qopengl.h>
+#include <QOpenGLFunctions>
+
 #include <IL/il.h>
 
 #include <assimp/cimport.h>
@@ -18,7 +22,7 @@ enum DisplayMode { Wireframe, Flat, Flatlines };
 enum ShadingMode { FlatS, Gouraud, Phong };
 enum TransformMode { Rotation, Translation };
 
-class ModelManager {
+class ModelManager : public QOpenGLFunctions {
 
 public:
     ModelManager();
@@ -28,6 +32,7 @@ public:
     bool loadTextures();                        //加载texture
     void renderTheModel();                      //渲染模型入口
     void renderWithShader(GLuint posAttr, GLuint norAttr);  //使用着色器渲染
+    void initializeGL();                        //初始化OpenGL函数和状态
 
 public:
     TextureState textureState;     //当前是否已经加载纹理
