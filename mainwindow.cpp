@@ -57,10 +57,19 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->pushButtonY, &QPushButton::clicked, m_pOpenglWidget, &MyQOpenglWidget::setYView);
     connect(ui->pushButtonZ, &QPushButton::clicked, m_pOpenglWidget, &MyQOpenglWidget::setZView);
 
+    // 连接UI中的显示模式切换按钮
+    connect(ui->btnPointCloud, &QPushButton::clicked, [this]() {
+        m_pOpenglWidget->setViewMode(ViewMode::PointCloudOnly);
+    });
+    connect(ui->btnMesh, &QPushButton::clicked, [this]() {
+        m_pOpenglWidget->setViewMode(ViewMode::MeshOnly);
+    });
+    connect(ui->btnHybrid, &QPushButton::clicked, [this]() {
+        m_pOpenglWidget->setViewMode(ViewMode::Hybrid);
+    });
 
-    // 修复：使用centralwidget作为父控件
-    m_openglwindow = new OpenglWindow(ui->centralwidget);
-    m_openglwindow->resize(ui->openGLWidget->size());
+
+    // 移除独立的OpenglWindow，统一使用MyQOpenglWidget
 
     //绑定脚本
     connect(ui->actionVectorization_2,&QAction::triggered,this,&MainWindow::executeBashScript);
@@ -94,21 +103,22 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::loadTextureOp() { if (m_openglwindow) m_openglwindow->loadTextureOp(); }
-void MainWindow::deleteTextureOp() { if (m_openglwindow) m_openglwindow->deleteTextureOp(); }
-void MainWindow::showColorNone() { if (m_openglwindow) m_openglwindow->showColorNone(); }
-void MainWindow::showColorRed() { if (m_openglwindow) m_openglwindow->showColorRed(); }
-void MainWindow::showColorGreen() { if (m_openglwindow) m_openglwindow->showColorGreen(); }
-void MainWindow::showWireframe() { if (m_openglwindow) m_openglwindow->showWireframe(); }
-void MainWindow::showFlat() { if (m_openglwindow) m_openglwindow->showFlat(); }
-void MainWindow::showFlatlines() { if (m_openglwindow) m_openglwindow->showFlatlines(); }
-void MainWindow::shadingGouraud() { if (m_openglwindow) m_openglwindow->shadingGouraud(); }
-void MainWindow::shadingPhong() { if (m_openglwindow) m_openglwindow->shadingPhong(); }
-void MainWindow::shadingFlat() { if (m_openglwindow) m_openglwindow->shadingFlat(); }
-void MainWindow::rotationOp() { if (m_openglwindow) m_openglwindow->rotationOp(); }
-void MainWindow::translationOp() { if (m_openglwindow) m_openglwindow->translationOp(); }
-void MainWindow::subdivisionOn() { if (m_openglwindow) m_openglwindow->subdivisionOn(); }
-void MainWindow::subdivisionOff() { if (m_openglwindow) m_openglwindow->subdivisionOff(); }
+// 暂时注释掉这些高级功能，先解决主要的显示问题
+void MainWindow::loadTextureOp() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::deleteTextureOp() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::showColorNone() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::showColorRed() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::showColorGreen() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::showWireframe() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::showFlat() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::showFlatlines() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::shadingGouraud() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::shadingPhong() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::shadingFlat() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::rotationOp() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::translationOp() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::subdivisionOn() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
+void MainWindow::subdivisionOff() { /* TODO: 需要在MyQOpenglWidget中实现 */ }
 
 
 
@@ -408,7 +418,7 @@ void MainWindow::onImportModelTriggered()
         return;
     }
     // 传递路径到 OpenGL 窗口
-    if (m_openglwindow->loadModel(filePath)) { // 假设 m_pOpenglWidget 是 OpenGL 窗口对象
+    if (m_pOpenglWidget->loadMeshModel(filePath)) {
         qDebug() << "模型加载成功：" << filePath;
     } else {
         QMessageBox::critical(this, "错误", "无法加载模型文件");
@@ -438,7 +448,7 @@ void MainWindow::onImportModelTriggered2()
         return;
     }
 
-    if (m_openglwindow && m_openglwindow->loadModel(filePath)) {
+    if (m_pOpenglWidget && m_pOpenglWidget->loadMeshModel(filePath)) {
         qDebug() << "模型加载成功：" << filePath;
     } else {
         QMessageBox::critical(this, "错误", "无法加载模型文件");

@@ -9,7 +9,6 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include "myqopenglwidget.h"
-#include "openglwindow.h"
 #include "pcdreader.h"
 #include "config.h"
 
@@ -124,7 +123,7 @@ private:
 
     std::vector<QVector3D> m_currentCloud; // 新增当前点云存储
 
-    OpenglWindow* m_openglwindow;
+    // 已移除OpenglWindow，统一使用MyQOpenglWidget
 
     void setupStackedWidget();
     void createLineView();
