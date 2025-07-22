@@ -1,8 +1,6 @@
 #ifndef MODELMANAGER_H
 #define MODELMANAGER_H
 
-#include <gl/freeglut.h>
-#include <GL/glew.h>
 #include <IL/il.h>
 
 #include <assimp/cimport.h>

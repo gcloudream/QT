@@ -1,5 +1,10 @@
 #ifndef MYQOPENGLWIDGET_H
 #define MYQOPENGLWIDGET_H
+
+// GLEW must be included before any other OpenGL headers
+#include <gl/freeglut.h>
+#include <GL/glew.h>
+
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLFunctions>
 #include <QtOpenGLWidgets/QOpenGLWidget>

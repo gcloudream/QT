@@ -1,5 +1,4 @@
 #include "openglwindow.h"
-#include <gl/freeglut.h>
 #include <filesystem> // 必须包含此头文件
 
 #define SCALE_FACTOR 0.1f

@@ -1,6 +1,10 @@
 #ifndef OPENGLWINDOW_H
 #define OPENGLWINDOW_H
 
+// GLEW must be included before any other OpenGL headers
+#include <gl/freeglut.h>
+#include <GL/glew.h>
+
 #include <QtOpenGLWidgets/QOpenGLWidget>
 #include <QKeyEvent>
 #include <QMouseEvent>
