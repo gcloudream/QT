@@ -58,9 +58,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->pushButtonZ, &QPushButton::clicked, m_pOpenglWidget, &MyQOpenglWidget::setZView);
 
 
-    // m_openglwindow = new OpenglWindow(ui->widget); // 正确初始化
-    // 修改后：关联到显示模型的控件
-    m_openglwindow = new OpenglWindow(ui->widget_2); // 根据实际UI调整
+    // 修复：使用centralwidget作为父控件
+    m_openglwindow = new OpenglWindow(ui->centralwidget);
     m_openglwindow->resize(ui->openGLWidget->size());
 
     //绑定脚本
@@ -95,92 +94,59 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::loadTextureOp() { ui->widget->loadTextureOp(); }
-void MainWindow::deleteTextureOp() { ui->widget->deleteTextureOp(); }
-void MainWindow::showColorNone() { ui->widget->showColorNone(); }
-void MainWindow::showColorRed() { ui->widget->showColorRed(); }
-void MainWindow::showColorGreen() { ui->widget->showColorGreen(); }
-void MainWindow::showWireframe() { ui->widget->showWireframe(); }
-void MainWindow::showFlat() { ui->widget->showFlat(); }
-void MainWindow::showFlatlines() { ui->widget->showFlatlines(); }
-void MainWindow::shadingGouraud() { ui->widget->shadingGouraud(); }
-void MainWindow::shadingPhong() { ui->widget->shadingPhong(); }
-void MainWindow::shadingFlat() { ui->widget->shadingFlat(); }
-void MainWindow::rotationOp() { ui->widget->rotationOp(); }
-void MainWindow::translationOp() { ui->widget->translationOp(); }
-void MainWindow::subdivisionOn() { ui->widget->subdivisionOn(); }
-void MainWindow::subdivisionOff() { ui->widget->subdivisionOff(); }
-
-
-
-// PCD格式：
-// ASCII格式
-// Binary格式
-// Binary_Compressed格式
-// 读取 binary_compressed 格式的PCD点云文件
-// LZF解压缩函数
-namespace {
-unsigned int lzf_decompress(const uint8_t* in_data, unsigned int in_len,
-                            uint8_t* out_data, unsigned int out_len) {
-    const uint8_t* ip = in_data;
-    const uint8_t* ip_limit = ip + in_len;
-    uint8_t* op = out_data;
-    uint8_t* op_limit = op + out_len;
-
-    while (ip < ip_limit) {
-        unsigned int ctrl = *ip++;
-
-        if (ctrl < 32) { // 字面量
-            ctrl++;
-            if (op + ctrl > op_limit) return 0;
-            if (ip + ctrl > ip_limit) return 0;
-
-            memcpy(op, ip, ctrl);
-            op += ctrl;
-            ip += ctrl;
-        } else { // 反向引用
-            unsigned int len = ctrl >> 5;
-            unsigned int ref = ((ctrl & 0x1f) << 8) + 1;
-
-            if (len == 7) {
-                len += *ip++;
-            }
-
-            ref += *ip++;
-            len += 2;
-
-            if (op + len > op_limit) return 0;
-            if (op - ref < out_data) return 0;
-
-            uint8_t* ref_ptr = op - ref;
-            for (unsigned int i = 0; i < len; i++) {
-                *op++ = *ref_ptr++;
-            }
-        }
-    }
-
-    return op - out_data;
-}
-}
+void MainWindow::loadTextureOp() { if (m_openglwindow) m_openglwindow->loadTextureOp(); }
+void MainWindow::deleteTextureOp() { if (m_openglwindow) m_openglwindow->deleteTextureOp(); }
+void MainWindow::showColorNone() { if (m_openglwindow) m_openglwindow->showColorNone(); }
+void MainWindow::showColorRed() { if (m_openglwindow) m_openglwindow->showColorRed(); }
+void MainWindow::showColorGreen() { if (m_openglwindow) m_openglwindow->showColorGreen(); }
+void MainWindow::showWireframe() { if (m_openglwindow) m_openglwindow->showWireframe(); }
+void MainWindow::showFlat() { if (m_openglwindow) m_openglwindow->showFlat(); }
+void MainWindow::showFlatlines() { if (m_openglwindow) m_openglwindow->showFlatlines(); }
+void MainWindow::shadingGouraud() { if (m_openglwindow) m_openglwindow->shadingGouraud(); }
+void MainWindow::shadingPhong() { if (m_openglwindow) m_openglwindow->shadingPhong(); }
+void MainWindow::shadingFlat() { if (m_openglwindow) m_openglwindow->shadingFlat(); }
+void MainWindow::rotationOp() { if (m_openglwindow) m_openglwindow->rotationOp(); }
+void MainWindow::translationOp() { if (m_openglwindow) m_openglwindow->translationOp(); }
+void MainWindow::subdivisionOn() { if (m_openglwindow) m_openglwindow->subdivisionOn(); }
+void MainWindow::subdivisionOff() { if (m_openglwindow) m_openglwindow->subdivisionOff(); }
 
 
 
 void MainWindow::generateFloorPlanWithTexture() {
-    // 设置工作目录并执行Python脚本
-    QString workingDir = "C:/SLAM/floorplan_code_v1/texture";
-    QString command = "C:/Users/3DSMART/AppData/Local/Programs/Python/Python311/python.exe";
+    // 使用配置管理获取路径
+    Config& config = Config::instance();
+    QString workingDir = config.getTextureWorkingDirectory();
+    QString pythonPath = config.getPythonPath();
     QString script = "generate_floorplan_with_texture.py";
+
+    // 验证路径是否有效
+    if (pythonPath.isEmpty()) {
+        QMessageBox::warning(this, "配置错误", 
+                           "未找到Python解释器。请在配置中设置正确的Python路径。");
+        return;
+    }
+    
+    if (workingDir.isEmpty() || !QDir(workingDir).exists()) {
+        QMessageBox::warning(this, "配置错误", 
+                           QString("工作目录不存在：%1\n请检查floorplan_code_v1/texture目录路径。").arg(workingDir));
+        return;
+    }
 
     QProcess process;
     process.setWorkingDirectory(workingDir);
-    process.start(command, QStringList() << script);
+    process.start(pythonPath, QStringList() << script);
 
     if (process.waitForFinished(30000)) {
         if (process.exitCode() == 0) {
             qDebug() << "执行成功:" << process.readAllStandardOutput();
+            statusBar()->showMessage("平面图生成完成", 3000);
         } else {
             qDebug() << "执行失败:" << process.readAllStandardError();
+            QMessageBox::warning(this, "执行错误", 
+                               QString("Python脚本执行失败:\n%1").arg(QString(process.readAllStandardError())));
         }
+    } else {
+        QMessageBox::warning(this, "超时错误", "Python脚本执行超时 (30秒)");
     }
 }
 
@@ -362,41 +328,67 @@ void MainWindow::setupLineViewMenus()
 
 
 void MainWindow::executeBashScript() {
-    // 准备脚本执行
-    QProcess *process = new QProcess(this);  // 使用指针并设置父对象
-    QString pythonPath = "C:/Users/3DSMART/AppData/Local/Programs/Python/Python311/python.exe";
+    // 使用配置管理获取路径
+    Config& config = Config::instance();
+    QString pythonPath = config.getPythonPath();
+    QString workingDir = config.getFloorplanWorkingDirectory();
     QString scriptPath = "./bash_run.py";
 
-    // 设置工作目录为指定目录
-    process->setWorkingDirectory("C:/SLAM/floorplan_code_v1/py_script");
+    // 验证配置
+    if (pythonPath.isEmpty()) {
+        QMessageBox::warning(this, "配置错误", 
+                           "未找到Python解释器。请在配置中设置正确的Python路径。");
+        return;
+    }
+    
+    if (workingDir.isEmpty() || !QDir(workingDir).exists()) {
+        QMessageBox::warning(this, "配置错误", 
+                           QString("工作目录不存在：%1\n请检查floorplan_code_v1/py_script目录路径。").arg(workingDir));
+        return;
+    }
+
+    // 准备脚本执行
+    QProcess *process = new QProcess(this);
+    process->setWorkingDirectory(workingDir);
 
     // 准备参数列表
     QStringList arguments;
-    arguments << scriptPath;  // Python脚本路径作为参数
+    arguments << scriptPath;
 
     // 连接信号槽来处理进程完成事件
     connect(process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            [process](int exitCode, QProcess::ExitStatus) {
-                qDebug() << "Python脚本执行完成，退出代码:" << exitCode;
-                qDebug() << "输出:" << process->readAllStandardOutput();
-                qDebug() << "错误信息:" << process->readAllStandardError();
+            [this, process](int exitCode, QProcess::ExitStatus status) {
+                if (exitCode == 0) {
+                    qDebug() << "Python脚本执行完成，退出代码:" << exitCode;
+                    qDebug() << "输出:" << process->readAllStandardOutput();
+                    statusBar()->showMessage("矢量化处理完成", 3000);
+                } else {
+                    qDebug() << "Python脚本执行失败，退出代码:" << exitCode;
+                    qDebug() << "错误信息:" << process->readAllStandardError();
+                    QMessageBox::warning(this, "执行错误", 
+                                       QString("矢量化处理失败:\n%1").arg(QString(process->readAllStandardError())));
+                }
                 process->deleteLater();  // 自动清理进程对象
             });
 
     // 启动Python脚本
     qDebug() << "执行Python解释器:" << pythonPath;
+    qDebug() << "工作目录:" << workingDir;
     qDebug() << "脚本路径:" << scriptPath;
 
     process->start(pythonPath, arguments);
 
     // 处理进程启动
-    if (!process->waitForStarted()) {
+    if (!process->waitForStarted(5000)) {
         qDebug() << "错误: 无法启动Python进程";
+        QMessageBox::critical(this, "启动错误", 
+                             QString("无法启动Python进程:\n%1").arg(process->errorString()));
         process->deleteLater();
         return;
     }
 
     qDebug() << "Python脚本已启动，正在后台运行...";
+    statusBar()->showMessage("正在执行矢量化处理...", 0);
 }
 
 // mainwindow.cpp
@@ -445,7 +437,7 @@ void MainWindow::onImportModelTriggered2()
         return;
     }
 
-    if (ui->widget->loadModel(filePath)) {
+    if (m_openglwindow && m_openglwindow->loadModel(filePath)) {
         qDebug() << "模型加载成功：" << filePath;
     } else {
         QMessageBox::critical(this, "错误", "无法加载模型文件");
@@ -776,205 +768,10 @@ void MainWindow::PointCloud()
     qDebug() << "成功加载点云，共" << cloud.size() << "个点";
 }
 
-// 修改后的ReadVec3PointCloudPCD函数
+// 使用PCDReader类读取PCD文件
 std::vector<QVector3D> MainWindow::ReadVec3PointCloudPCD(const QString &filename)
 {
-    std::vector<QVector3D> cloud;
-    QFile file(filename);
-
-    if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << "无法打开PCD文件：" << filename;
-        return cloud;
-    }
-
-    // 解析PCD文件头
-    PCDHeader header;
-    QTextStream textStream(&file);
-    QString line;
-
-    while (!textStream.atEnd()) {
-        qint64 currentPos = textStream.pos();
-        line = textStream.readLine().trimmed();
-
-        if (line.startsWith("#") || line.isEmpty()) {
-            continue;
-        }
-
-        if (line.startsWith("FIELDS")) {
-            QStringList fields = line.split(' ', Qt::SkipEmptyParts);
-            for (int i = 1; i < fields.size(); ++i) {
-                header.fields.push_back(fields[i]);
-            }
-        }
-        else if (line.startsWith("SIZE")) {
-            QStringList sizes = line.split(' ', Qt::SkipEmptyParts);
-            for (int i = 1; i < sizes.size(); ++i) {
-                header.sizes.push_back(sizes[i].toInt());
-            }
-        }
-        else if (line.startsWith("TYPE")) {
-            QStringList types = line.split(' ', Qt::SkipEmptyParts);
-            for (int i = 1; i < types.size(); ++i) {
-                if (!types[i].isEmpty()) {
-                    header.types.push_back(types[i][0].toLatin1());
-                }
-            }
-        }
-        else if (line.startsWith("COUNT")) {
-            QStringList counts = line.split(' ', Qt::SkipEmptyParts);
-            for (int i = 1; i < counts.size(); ++i) {
-                header.counts.push_back(counts[i].toInt());
-            }
-        }
-        else if (line.startsWith("WIDTH")) {
-            header.width = line.split(' ', Qt::SkipEmptyParts)[1].toInt();
-        }
-        else if (line.startsWith("HEIGHT")) {
-            header.height = line.split(' ', Qt::SkipEmptyParts)[1].toInt();
-        }
-        else if (line.startsWith("POINTS")) {
-            header.points = line.split(' ', Qt::SkipEmptyParts)[1].toInt();
-        }
-        else if (line.startsWith("DATA")) {
-            header.data_type = line.split(' ', Qt::SkipEmptyParts)[1].toLower();
-            // 记录DATA行后的位置作为数据开始位置
-            header.header_size = textStream.pos();
-            break;
-        }
-    }
-
-    // 验证必要字段
-    int x_idx = -1, y_idx = -1, z_idx = -1;
-    for (int i = 0; i < header.fields.size(); ++i) {
-        if (header.fields[i] == "x") x_idx = i;
-        else if (header.fields[i] == "y") y_idx = i;
-        else if (header.fields[i] == "z") z_idx = i;
-    }
-
-    if (x_idx == -1 || y_idx == -1 || z_idx == -1) {
-        qDebug() << "PCD文件缺少x, y, z字段";
-        return cloud;
-    }
-
-    // 根据数据类型读取数据
-    if (header.data_type == "ascii") {
-        // ASCII格式读取（保持原有逻辑）
-        cloud.reserve(header.points);
-        while (!textStream.atEnd() && cloud.size() < header.points) {
-            line = textStream.readLine().trimmed();
-            if (line.isEmpty() || line.startsWith("#")) continue;
-
-            QStringList coords = line.split(' ', Qt::SkipEmptyParts);
-            if (coords.size() >= std::max({x_idx, y_idx, z_idx}) + 1) {
-                bool okX, okY, okZ;
-                float x = coords[x_idx].toFloat(&okX);
-                float y = coords[y_idx].toFloat(&okY);
-                float z = coords[z_idx].toFloat(&okZ);
-
-                if (okX && okY && okZ && std::isfinite(x) && std::isfinite(y) && std::isfinite(z)) {
-                    cloud.emplace_back(x, y, z);
-                }
-            }
-        }
-    }
-    else if (header.data_type == "binary") {
-        // 普通二进制格式
-        file.seek(header.header_size);
-        cloud.reserve(header.points);
-
-        // 计算每个点的字节数
-        int point_size = 0;
-        for (int i = 0; i < header.sizes.size(); ++i) {
-            point_size += header.sizes[i];
-        }
-
-        QByteArray buffer(point_size, 0);
-        for (int i = 0; i < header.points; ++i) {
-            if (file.read(buffer.data(), point_size) != point_size) break;
-
-            float x = *reinterpret_cast<float*>(buffer.data() + x_idx * sizeof(float));
-            float y = *reinterpret_cast<float*>(buffer.data() + y_idx * sizeof(float));
-            float z = *reinterpret_cast<float*>(buffer.data() + z_idx * sizeof(float));
-
-            if (std::isfinite(x) && std::isfinite(y) && std::isfinite(z)) {
-                cloud.emplace_back(x, y, z);
-            }
-        }
-    }
-    else if (header.data_type == "binary_compressed") {
-        // 压缩二进制格式
-        file.seek(header.header_size);
-
-        // 读取压缩数据大小和解压后大小
-        uint32_t compressed_size = 0, uncompressed_size = 0;
-        file.read(reinterpret_cast<char*>(&compressed_size), sizeof(uint32_t));
-        file.read(reinterpret_cast<char*>(&uncompressed_size), sizeof(uint32_t));
-
-        qDebug() << "压缩数据大小：" << compressed_size << "字节";
-        qDebug() << "解压后大小：" << uncompressed_size << "字节";
-
-        // 读取压缩数据
-        std::vector<uint8_t> compressed_data(compressed_size);
-        if (file.read(reinterpret_cast<char*>(compressed_data.data()), compressed_size) != compressed_size) {
-            qDebug() << "读取压缩数据失败";
-            return cloud;
-        }
-
-        // 解压数据
-        std::vector<uint8_t> uncompressed_data(uncompressed_size);
-        unsigned int decompressed_size = lzf_decompress(
-            compressed_data.data(), compressed_size,
-            uncompressed_data.data(), uncompressed_size
-            );
-
-        if (decompressed_size != uncompressed_size) {
-            qDebug() << "解压失败：期望" << uncompressed_size << "字节，实际解压" << decompressed_size << "字节";
-            return cloud;
-        }
-
-        qDebug() << "解压成功";
-
-        // 从SoA（Structure of Arrays）格式转换为点云
-        cloud.reserve(header.points);
-
-        // 计算每个字段的偏移量（在SoA布局中）
-        std::vector<size_t> field_offsets(header.fields.size(), 0);
-        for (int i = 1; i < header.fields.size(); ++i) {
-            field_offsets[i] = field_offsets[i-1] + header.points * header.sizes[i-1];
-        }
-
-        // 获取x, y, z数据的指针
-        const float* x_ptr = reinterpret_cast<const float*>(uncompressed_data.data() + field_offsets[x_idx]);
-        const float* y_ptr = reinterpret_cast<const float*>(uncompressed_data.data() + field_offsets[y_idx]);
-        const float* z_ptr = reinterpret_cast<const float*>(uncompressed_data.data() + field_offsets[z_idx]);
-
-        // 读取点云数据
-        for (int i = 0; i < header.points; ++i) {
-            float x = x_ptr[i];
-            float y = y_ptr[i];
-            float z = z_ptr[i];
-
-            if (std::isfinite(x) && std::isfinite(y) && std::isfinite(z)) {
-                cloud.emplace_back(x, y, z);
-            }
-        }
-
-        qDebug() << "成功读取" << cloud.size() << "个有效点";
-    }
-    else {
-        qDebug() << "不支持的数据格式：" << header.data_type;
-        QMessageBox::warning(nullptr, "读取失败",
-                             QString("不支持的PCD数据格式：%1").arg(header.data_type));
-    }
-
-    file.close();
-
-    qDebug() << "PCD文件读取完成：";
-    qDebug() << "  文件格式：" << header.data_type;
-    qDebug() << "  期望点数：" << header.points;
-    qDebug() << "  实际读取：" << cloud.size();
-
-    return cloud;
+    return PCDReader::ReadVec3PointCloudPCD(filename);
 }
 
 // PCD文件分析函数（调试用）
@@ -1062,28 +859,6 @@ void MainWindow::analyzePCDFile(const QString &filename)
 
 
 
-
-// /* 在MainWindow中使用新的PCD读取器 */
-// std::vector<QVector3D> MainWindow::ReadVec3PointCloudPCD(const QString& filename) {
-//     return PCDReader::ReadVec3PointCloudPCD(filename);
-// }
-/**
- *
- * 支持所有PCD格式：
-ASCII格式
-Binary格式
-Binary_Compressed格式
-
-智能解压缩：
-自动尝试Qt的qUncompress（支持zlib/deflate）
-处理可能的压缩头信息
-如果解压缩失败，尝试将数据作为未压缩数据处理
-
-健壮的数据解析：
-完整的头部信息解析
-精确的字段偏移量计算
-数据有效性验证
-*/
 
 // 在MainWindow类中添加清空所有点云的函数
 
@@ -1185,128 +960,6 @@ void MainWindow::PointCloud2()
                                      .arg(timer.elapsed()), 3000);
     }
 }
-
-//单个显示
-// void MainWindow::PointCloud2()
-// {
-//     // 1. 获取选中的文件路径
-//     QModelIndex currentIndex = ui->treeView->currentIndex();
-//     if (!currentIndex.isValid()) {
-//         QMessageBox::warning(this, "未选择文件", "请先在目录树中选择一个点云文件");
-//         return;
-//     }
-
-//     // 2. 验证文件类型
-//     QString filePath = m_dirModel->filePath(currentIndex);
-//     QFileInfo fileInfo(filePath);
-//     if (fileInfo.isDir()) {
-//         QMessageBox::warning(this, "选择错误", "请选择文件而不是文件夹");
-//         return;
-//     }
-
-//     QString extension = fileInfo.suffix().toLower();
-//     if (extension != "ply" && extension != "txt") {
-//         QMessageBox::warning(this, "格式错误",
-//                              QString("仅支持PLY和TXT文件，当前文件类型: .%1").arg(fileInfo.suffix()));
-//         return;
-//     }
-
-//     // 3. 根据文件格式读取点云数据
-//     std::vector<QVector3D> cloud;
-
-//     if (extension == "ply") {
-//         cloud = ReadVec3PointCloudPLY(filePath);
-//     }
-//     else if (extension == "txt") {
-//         cloud = ReadVec3PointCloudTXT(filePath);
-//     }
-
-//     if (cloud.empty()) {
-//         QMessageBox::critical(this, "数据错误",
-//                               QString("无法读取点云数据：\n%1\n可能原因：\n1. 文件格式不正确\n2. 文件已损坏\n3. 文件为空").arg(filePath));
-//         return;
-//     }
-
-//     // 4. 显示点云（带性能监控）
-//     QElapsedTimer timer;    // 改用QElapsedTimer
-//     timer.start();          // 正确的启动计时方法
-
-//     m_currentCloud = cloud; // 保存当前点云数据
-//     m_pOpenglWidget->showPointCloud(cloud);
-
-//     qDebug() << "[点云加载]"
-//              << "\n  文件路径:" << filePath
-//              << "\n  文件类型:" << extension.toUpper()
-//              << "\n  点数:" << cloud.size()
-//              << "\n  耗时:" << timer.elapsed() << "ms"; // 使用elapsed()获取毫秒数
-
-//     // 5. 可选：在状态栏显示加载信息
-//     statusBar()->showMessage(QString("成功加载点云: %1个点 (%2ms)")
-//                                  .arg(cloud.size())
-//                                  .arg(timer.elapsed()), 3000);
-// }
-
-// /* 从PLY文件读取三维点云数据 */
-// std::vector<QVector3D> MainWindow::ReadVec3PointCloudPLY(QString path)
-// {
-//     std::vector<QVector3D> cloud;
-//     QFile file(path);
-
-//     // 在读取文件头时添加PLY格式校验
-//     if (!file.open(QFile::ReadOnly | QIODevice::Text)) {
-//         qDebug() << "无法打开PLY文件：" << path;
-//         return cloud;
-//     }
-
-//     QTextStream in(&file);
-//     QString line;
-//     int vertexCount = 0;
-//     bool readingHeader = true;
-
-//     // 解析PLY文件头
-//     while (!in.atEnd() && readingHeader) {
-//         line = in.readLine().trimmed();
-
-//         if (line.startsWith("element vertex")) {
-//             QStringList parts = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
-//             if (parts.size() >= 3) {
-//                 vertexCount = parts[2].toInt();
-//             }
-//         }
-//         else if (line == "end_header") {
-//             readingHeader = false;
-//             break;
-//         }
-//     }
-
-//     if (vertexCount <= 0) {
-//         qDebug() << "无效的顶点数量";
-//         return cloud;
-//     }
-
-//     // 预分配内存
-//     cloud.reserve(vertexCount);
-
-//     // 读取顶点数据
-//     for (int i = 0; i < vertexCount && !in.atEnd(); ++i) {
-//         line = in.readLine().trimmed();
-//         QStringList parts = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
-
-//         if (parts.size() >= 3) {
-//             bool okX, okY, okZ;
-//             float x = parts[0].toFloat(&okX);
-//             float y = parts[1].toFloat(&okY);
-//             float z = parts[2].toFloat(&okZ);
-
-//             if (okX && okY && okZ) {
-//                 cloud.emplace_back(x, y, z);
-//             }
-//         }
-//     }
-
-//     return cloud;
-// }
-
 
 /* 读取TXT格式点云文件的函数实现 */
 std::vector<QVector3D> MainWindow::ReadVec3PointCloudTXT(const QString& filename)

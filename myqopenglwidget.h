@@ -17,8 +17,16 @@
 #include <QTime>
 #include <QScopedPointer>
 #include "MinBoundingBox.h"
+#include "modelmanager.h"
 
 using namespace std;
+
+// 显示模式枚举
+enum class DisplayMode {
+    PointCloudOnly,
+    MeshOnly,
+    Hybrid
+};
 
 QT_BEGIN_NAMESPACE
 class QPainter;
@@ -39,6 +47,17 @@ public:
     void setBackgroundColor(QVector3D color);
     void clearPointCloud();
     void appendPointCloud(const std::vector<QVector3D> &cloud);
+    
+    // 新增mesh功能
+    bool loadMeshModel(const QString& modelPath);
+    void clearMeshModel();
+    void setDisplayMode(DisplayMode mode);
+    DisplayMode getDisplayMode() const;
+    
+    // 渲染控制
+    void setMeshVisible(bool visible);
+    void setPointCloudVisible(bool visible);
+    
     // 设置是否显示坐标轴
     void setShowAxis(bool show);
     // 获取当前坐标轴显示状态
@@ -95,6 +114,12 @@ private:
     QVector<VertexInfo> m_PointsVertex;
     MinBoundingBox m_box;
 
+    // mesh渲染相关
+    DisplayMode m_displayMode;
+    bool m_meshVisible;
+    bool m_pointCloudVisible;
+    ModelManager* m_modelManager;
+
     QVector3D m_lineMove;
     QQuaternion m_rotate;
     QVector3D m_rotationAxis;
@@ -122,6 +147,10 @@ private:
     void addAxisData();
 
     void appendPointCloudData(const std::vector<QVector3D> &cloud);
+    
+    // mesh渲染函数
+    void renderMesh();
+    void initMeshGL();
 
 
     //debug

@@ -39,95 +39,108 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
-    <widget class="QWidget" name="tab">
+    <widget class="QWidget" name="tab_unified">
      <attribute name="title">
-      <string>Tab </string>
+      <string>3D Display</string>
      </attribute>
-     <widget class="OpenglWindow" name="widget_2" native="true">
+     <widget class="QWidget" name="displayControlWidget">
       <property name="geometry">
        <rect>
         <x>30</x>
-        <y>30</y>
+        <y>0</y>
         <width>891</width>
-        <height>651</height>
+        <height>35</height>
        </rect>
       </property>
-      <property name="focusPolicy">
-       <enum>Qt::FocusPolicy::ClickFocus</enum>
-      </property>
+      <widget class="QPushButton" name="btnPointCloud">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>5</y>
+         <width>80</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>点云模式</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="btnMesh">
+       <property name="geometry">
+        <rect>
+         <x>100</x>
+         <y>5</y>
+         <width>80</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Mesh模式</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="btnHybrid">
+       <property name="geometry">
+        <rect>
+         <x>190</x>
+         <y>5</y>
+         <width>80</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>混合显示</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButtonX">
+       <property name="geometry">
+        <rect>
+         <x>800</x>
+         <y>5</y>
+         <width>21</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>X</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButtonY">
+       <property name="geometry">
+        <rect>
+         <x>830</x>
+         <y>5</y>
+         <width>21</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Y</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButtonZ">
+       <property name="geometry">
+        <rect>
+         <x>860</x>
+         <y>5</y>
+         <width>21</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Z</string>
+       </property>
+      </widget>
      </widget>
-    </widget>
-    <widget class="QWidget" name="tab_2">
-     <attribute name="title">
-      <string>Point Cloud</string>
-     </attribute>
      <widget class="QOpenGLWidget" name="openGLWidget">
       <property name="geometry">
        <rect>
         <x>30</x>
-        <y>20</y>
+        <y>40</y>
         <width>891</width>
-        <height>651</height>
+        <height>641</height>
        </rect>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButtonX">
-      <property name="geometry">
-       <rect>
-        <x>800</x>
-        <y>0</y>
-        <width>21</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>X</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButtonY">
-      <property name="geometry">
-       <rect>
-        <x>840</x>
-        <y>0</y>
-        <width>21</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Y</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButtonZ">
-      <property name="geometry">
-       <rect>
-        <x>880</x>
-        <y>0</y>
-        <width>21</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Z</string>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QWidget" name="tab_7">
-     <attribute name="title">
-      <string>Mesh</string>
-     </attribute>
-     <widget class="OpenglWindow" name="widget" native="true">
-      <property name="geometry">
-       <rect>
-        <x>30</x>
-        <y>20</y>
-        <width>891</width>
-        <height>651</height>
-       </rect>
-      </property>
-      <property name="focusPolicy">
-       <enum>Qt::FocusPolicy::ClickFocus</enum>
       </property>
      </widget>
     </widget>

@@ -31,6 +31,10 @@ MyQOpenglWidget::MyQOpenglWidget(QWidget *parent)
     ,m_VAO(nullptr)
     ,m_scale(1.0f)
     ,m_bShowAxis(false)
+    ,m_displayMode(DisplayMode::PointCloudOnly)
+    ,m_meshVisible(true)
+    ,m_pointCloudVisible(true)
+    ,m_modelManager(nullptr)
 {
     m_Timer = new QTimer;
     // m_context.reset(new QOpenGLContext());
@@ -44,12 +48,18 @@ MyQOpenglWidget::MyQOpenglWidget(QWidget *parent)
     for (GLuint i = 0; i < 6; ++i) {
         m_Axisindices[i] = i;
     }
+    
+    // 初始化ModelManager
+    m_modelManager = new ModelManager();
     //this->grabKeyboard();
 }
 
 MyQOpenglWidget::~MyQOpenglWidget()
 {
-
+    if (m_modelManager) {
+        delete m_modelManager;
+        m_modelManager = nullptr;
+    }
 }
 
 // 切换到X视图 (从X轴正方向看向YZ平面)
@@ -444,31 +454,37 @@ void MyQOpenglWidget::GetShaderUniformPara()
 void MyQOpenglWidget::paintGL()
 {
     makeCurrent();
-    m_Program->bind();
     glClearColor(m_backgroundColor.x(), m_backgroundColor.y(), m_backgroundColor.z(), m_backgroundColor.w());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    m_VAO->bind();
-    setMatrixUniform();
-
-    // 绘制点云
-    glDrawArrays(GL_POINTS, 6,(GLsizei ) m_PointsVertex.size()-6);
-
-    // 绘制坐标轴
-    if(m_bShowAxis){
-        // 启用混合以支持透明度
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        glLineWidth(1.5f); // 设置更细的轴线宽度
-        glDrawElements(GL_LINES,6,GL_UNSIGNED_INT,0);
-        glLineWidth(1.0f); // 恢复默认线宽
-
-        glDisable(GL_BLEND); // 禁用混合
+    
+    // 根据显示模式选择渲染内容
+    switch(m_displayMode) {
+        case DisplayMode::PointCloudOnly:
+            if (m_pointCloudVisible) {
+                renderPointCloud();
+            }
+            break;
+            
+        case DisplayMode::MeshOnly:
+            if (m_meshVisible) {
+                renderMesh();
+            }
+            break;
+            
+        case DisplayMode::Hybrid:
+            if (m_pointCloudVisible) {
+                renderPointCloud();
+            }
+            if (m_meshVisible) {
+                renderMesh();
+            }
+            break;
     }
-
-    m_VAO->release();
-    m_Program->release();
+    
+    // 渲染坐标轴
+    if(m_bShowAxis) {
+        renderAxis();
+    }
 }
 
 void MyQOpenglWidget::setMatrixUniform()
@@ -700,6 +716,130 @@ QVector3D MyQOpenglWidget::pixelPosToViewPos(const QVector2D &p)
         viewPos.normalize();
     }
     return viewPos;
+}
+
+// 新增的渲染函数实现
+void MyQOpenglWidget::renderPointCloud()
+{
+    m_Program->bind();
+    m_VAO->bind();
+    setMatrixUniform();
+    
+    // 绘制点云
+    glDrawArrays(GL_POINTS, 6,(GLsizei ) m_PointsVertex.size()-6);
+    
+    m_VAO->release();
+    m_Program->release();
+}
+
+void MyQOpenglWidget::renderAxis()
+{
+    m_Program->bind();
+    m_VAO->bind();
+    setMatrixUniform();
+    
+    // 启用混合以支持透明度
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glLineWidth(1.5f); // 设置更细的轴线宽度
+    glDrawElements(GL_LINES,6,GL_UNSIGNED_INT,0);
+    glLineWidth(1.0f); // 恢复默认线宽
+    glDisable(GL_BLEND); // 禁用混合
+    
+    m_VAO->release();
+    m_Program->release();
+}
+
+void MyQOpenglWidget::renderMesh()
+{
+    if (!m_modelManager) return;
+    
+    // 保存当前OpenGL状态
+    glPushMatrix();
+    
+    // 应用与点云相同的变换矩阵
+    QMatrix4x4 matrix;
+    matrix.perspective(60.0f, (float)width() / height(), 0.01f, 100.0f);
+    matrix.lookAt(QVector3D(0, 0, 2), QVector3D(0, 0, 0), QVector3D(0, 1, 0));
+    matrix.translate(m_lineMove);
+    matrix.rotate(m_rotate);
+    matrix.scale(m_scale);
+
+    // 设置MVP矩阵
+    glMatrixMode(GL_MODELVIEW);
+    glLoadMatrixf(matrix.data());
+    
+    // 启用深度测试
+    glEnable(GL_DEPTH_TEST);
+    
+    // 渲染mesh模型
+    m_modelManager->renderTheModel();
+    
+    // 恢复OpenGL状态
+    glPopMatrix();
+}
+
+// 新增的mesh相关功能实现
+bool MyQOpenglWidget::loadMeshModel(const QString& modelPath)
+{
+    if (!m_modelManager) return false;
+    
+    bool success = m_modelManager->importModel(modelPath.toStdString());
+    if (success) {
+        update(); // 触发重绘
+    }
+    return success;
+}
+
+void MyQOpenglWidget::clearMeshModel()
+{
+    // 由ModelManager处理模型清理
+    if (m_modelManager) {
+        // ModelManager应该提供清理函数，这里暂时用重新初始化
+        delete m_modelManager;
+        m_modelManager = new ModelManager();
+    }
+    update();
+}
+
+void MyQOpenglWidget::setDisplayMode(DisplayMode mode)
+{
+    m_displayMode = mode;
+    update();
+}
+
+DisplayMode MyQOpenglWidget::getDisplayMode() const
+{
+    return m_displayMode;
+}
+
+void MyQOpenglWidget::setMeshVisible(bool visible)
+{
+    m_meshVisible = visible;
+    update();
+}
+
+void MyQOpenglWidget::setPointCloudVisible(bool visible)
+{
+    m_pointCloudVisible = visible;
+    update();
+}
+
+void MyQOpenglWidget::initMeshGL()
+{
+    // 初始化mesh渲染所需的OpenGL设置
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    
+    // 设置光照参数
+    GLfloat light_position[] = {1.0f, 1.0f, 1.0f, 0.0f};
+    GLfloat light_ambient[] = {0.2f, 0.2f, 0.2f, 1.0f};
+    GLfloat light_diffuse[] = {0.8f, 0.8f, 0.8f, 1.0f};
+    
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
 }
 
 

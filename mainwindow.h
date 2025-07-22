@@ -11,6 +11,7 @@
 #include "myqopenglwidget.h"
 #include "openglwindow.h"
 #include "pcdreader.h"
+#include "config.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
