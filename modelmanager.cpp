@@ -782,3 +782,105 @@ void ModelManager::renderPointFace(const struct aiMesh* mesh, const struct aiFac
     glVertex3fv(&(mesh->mVertices[index].x));
     glEnd();
 }
+
+// 新增：使用着色器的渲染方法
+void ModelManager::renderWithShader(GLuint posAttr, GLuint norAttr) {
+    if (!scene || !scene->mRootNode) {
+        return;
+    }
+    
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    
+    recursiveRenderWithShader(scene, scene->mRootNode, posAttr, norAttr);
+}
+
+// 新增：着色器递归渲染
+void ModelManager::recursiveRenderWithShader(const struct aiScene *sc, const struct aiNode* nd, GLuint posAttr, GLuint norAttr) {
+    if (!sc || !nd) return;
+    
+    aiMatrix4x4 mTrans = nd->mTransformation;
+    mTrans.Transpose();
+    glPushMatrix();
+    glMultMatrixf((float*)&mTrans);
+
+    // 对当前节点，遍历该节点的所有mMeshes
+    for (unsigned int m = 0; m < nd->mNumMeshes; m++) {
+        const struct aiMesh* mesh = scene->mMeshes[nd->mMeshes[m]];
+
+        // 对当前的mesh，遍历所有面face
+        for (unsigned int f = 0; f < mesh->mNumFaces; f++) {
+            const struct aiFace* face = &(mesh->mFaces[f]);
+            processFaceWithShader(mesh, face, posAttr, norAttr);
+        }
+    }
+
+    // 递归绘制其他子节点
+    for (unsigned int n = 0; n < nd->mNumChildren; ++n) {
+        recursiveRenderWithShader(sc, nd->mChildren[n], posAttr, norAttr);
+    }
+
+    glPopMatrix();
+}
+
+// 新增：着色器面处理
+void ModelManager::processFaceWithShader(const struct aiMesh* mesh, const struct aiFace* face, GLuint posAttr, GLuint norAttr) {
+    if (face->mNumIndices != 3) return; // 只处理三角形
+    
+    // 准备顶点数据
+    GLfloat vertices[9];  // 3个顶点 * 3个坐标
+    GLfloat normals[9];   // 3个法向量 * 3个坐标
+    
+    for (int i = 0; i < 3; i++) {
+        int index = face->mIndices[i];
+        
+        // 检查索引是否有效
+        if (index >= mesh->mNumVertices) {
+            return;
+        }
+        
+        // 填充顶点数据
+        vertices[i*3 + 0] = mesh->mVertices[index].x;
+        vertices[i*3 + 1] = mesh->mVertices[index].y;
+        vertices[i*3 + 2] = mesh->mVertices[index].z;
+        
+        // 填充法向量数据
+        if (mesh->mNormals != NULL) {
+            normals[i*3 + 0] = mesh->mNormals[index].x;
+            normals[i*3 + 1] = mesh->mNormals[index].y;
+            normals[i*3 + 2] = mesh->mNormals[index].z;
+        } else {
+            // 如果没有法向量，计算面法向量
+            if (i == 0) {
+                aiVector3D v0 = mesh->mVertices[face->mIndices[0]];
+                aiVector3D v1 = mesh->mVertices[face->mIndices[1]];
+                aiVector3D v2 = mesh->mVertices[face->mIndices[2]];
+                
+                aiVector3D edge1 = v1 - v0;
+                aiVector3D edge2 = v2 - v0;
+                aiVector3D normal = edge1 ^ edge2;
+                normalizeVector(normal);
+                
+                for (int j = 0; j < 3; j++) {
+                    normals[j*3 + 0] = normal.x;
+                    normals[j*3 + 1] = normal.y;
+                    normals[j*3 + 2] = normal.z;
+                }
+            }
+        }
+    }
+    
+    // 绑定顶点属性
+    glEnableVertexAttribArray(posAttr);
+    glVertexAttribPointer(posAttr, 3, GL_FLOAT, GL_FALSE, 0, vertices);
+    
+    glEnableVertexAttribArray(norAttr);
+    glVertexAttribPointer(norAttr, 3, GL_FLOAT, GL_FALSE, 0, normals);
+    
+    // 绘制三角形
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    
+    // 禁用顶点属性
+    glDisableVertexAttribArray(posAttr);
+    glDisableVertexAttribArray(norAttr);
+}

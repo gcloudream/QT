@@ -99,6 +99,11 @@ private:
     QScopedPointer<QOpenGLShaderProgram> m_Program;
     QScopedPointer<QOpenGLShader> m_VertexShader;
     QScopedPointer<QOpenGLShader> m_FragmentShader;
+    
+    // Mesh渲染着色器
+    QScopedPointer<QOpenGLShaderProgram> m_MeshProgram;
+    QScopedPointer<QOpenGLShader> m_MeshVertexShader;
+    QScopedPointer<QOpenGLShader> m_MeshFragmentShader;
 
     // shader spara
     GLuint m_posAttr;
@@ -107,6 +112,15 @@ private:
     GLuint m_matrixUniform;
     GLuint m_VBO;
     GLuint m_EBO;
+    
+    // Mesh着色器参数
+    GLuint m_meshPosAttr;
+    GLuint m_meshNorAttr;
+    GLuint m_meshMatrixUniform;
+    GLuint m_meshViewMatrixUniform;
+    GLuint m_meshLightPosUniform;
+    GLuint m_meshLightColorUniform;
+    GLuint m_meshAmbientUniform;
     QScopedPointer<QOpenGLVertexArrayObject> m_VAO;
     QVector4D m_backgroundColor;
 
@@ -132,6 +146,8 @@ private:
     GLuint createGPUProgram(QString nVertexShaderFile, QString nFragmentShaderFile);
     void GetShaderUniformPara();
     bool InitShader();
+    bool InitMeshShader();
+    void GetMeshShaderUniformPara();
 
     void LineMove(QVector2D posOrgin, QVector2D posEnd);
     void Rotate(QVector2D posOrgin, QVector2D posEnd);

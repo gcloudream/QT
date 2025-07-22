@@ -29,6 +29,7 @@ public:
     bool importModel(const string& pFile);      //加载模型
     bool loadTextures();                        //加载texture
     void renderTheModel();                      //渲染模型入口
+    void renderWithShader(GLuint posAttr, GLuint norAttr);  //使用着色器渲染
 
 public:
     TextureState textureState;     //当前是否已经加载纹理
@@ -50,10 +51,12 @@ private:
 
     //递归渲染
     void recursiveRender(const struct aiScene *sc, const struct aiNode* nd);
+    void recursiveRenderWithShader(const struct aiScene *sc, const struct aiNode* nd, GLuint posAttr, GLuint norAttr);
     void applyMaterial(const aiMaterial *mtl);    //给模型添加texture
 
     //处理面的函数入口
     void processFace(const struct aiMesh* mesh, GLenum face_mode, const struct aiFace* face);
+    void processFaceWithShader(const struct aiMesh* mesh, const struct aiFace* face, GLuint posAttr, GLuint norAttr);
     void subdivision(aiVector3D vPos1, aiVector3D vPos2, aiVector3D vPos3,
                      aiVector3D vNor1, aiVector3D vNor2, aiVector3D vNor3,
                      aiVector3D vTexPos1, aiVector3D vTexPos2, aiVector3D vTexPos3,

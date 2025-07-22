@@ -18,9 +18,45 @@ static const char *fragmentShaderSource =
     "   gl_FragColor = col;\n"
     "}\n";
 
+// Mesh渲染着色器
+static const char *meshVertexShaderSource =
+    "attribute highp vec3 position;\n"
+    "attribute highp vec3 normal;\n"
+    "uniform highp mat4 mvp_matrix;\n"
+    "uniform highp mat4 view_matrix;\n"
+    "uniform highp vec3 light_position;\n"
+    "uniform highp vec3 light_color;\n"
+    "uniform lowp float ambient_strength;\n"
+    "varying lowp vec4 fragment_color;\n"
+    "void main() {\n"
+    "    gl_Position = mvp_matrix * vec4(position, 1.0);\n"
+    "    \n"
+    "    // 计算光照\n"
+    "    vec3 norm = normalize(normal);\n"
+    "    vec3 light_dir = normalize(light_position - position);\n"
+    "    \n"
+    "    // 环境光\n"
+    "    vec3 ambient = ambient_strength * light_color;\n"
+    "    \n"
+    "    // 漫反射\n"
+    "    float diff = max(dot(norm, light_dir), 0.0);\n"
+    "    vec3 diffuse = diff * light_color;\n"
+    "    \n"
+    "    // 最终颜色\n"
+    "    vec3 result = (ambient + diffuse) * vec3(0.8, 0.8, 0.8);\n"
+    "    fragment_color = vec4(result, 1.0);\n"
+    "}\n";
+
+static const char *meshFragmentShaderSource =
+    "varying lowp vec4 fragment_color;\n"
+    "void main() {\n"
+    "    gl_FragColor = fragment_color;\n"
+    "}\n";
+
 MyQOpenglWidget::MyQOpenglWidget(QWidget *parent)
     : QOpenGLWidget(parent)
     ,m_Program(nullptr)
+    ,m_MeshProgram(nullptr)
     //,m_VertexShader(nullptr)
     //,m_FragmentShader(nullptr)
     ,m_posAttr(0)
@@ -41,6 +77,11 @@ MyQOpenglWidget::MyQOpenglWidget(QWidget *parent)
     m_Program.reset( new QOpenGLShaderProgram(this));
     m_VertexShader.reset(new QOpenGLShader(QOpenGLShader::Vertex));
     m_FragmentShader.reset( new QOpenGLShader(QOpenGLShader::Fragment));
+    
+    // 初始化mesh着色器
+    m_MeshProgram.reset(new QOpenGLShaderProgram(this));
+    m_MeshVertexShader.reset(new QOpenGLShader(QOpenGLShader::Vertex));
+    m_MeshFragmentShader.reset(new QOpenGLShader(QOpenGLShader::Fragment));
     m_VAO.reset(new QOpenGLVertexArrayObject());
 
     m_PointsVertex = QVector<VertexInfo>();
@@ -145,6 +186,7 @@ void MyQOpenglWidget::initializeGL()
     makeCurrent();
     bool binit = true;
     binit &= InitShader();
+    binit &= InitMeshShader();
     if (!binit)
     {
         return;
@@ -443,12 +485,33 @@ bool MyQOpenglWidget::InitShader()
     return success;
 }
 
+bool MyQOpenglWidget::InitMeshShader()
+{
+    bool success = true;
+    success &= m_MeshProgram->addShaderFromSourceCode(QOpenGLShader::Vertex, meshVertexShaderSource);
+    success &= m_MeshProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, meshFragmentShaderSource);
+    success &= m_MeshProgram->link();
+    GetMeshShaderUniformPara();
+    return success;
+}
+
 void MyQOpenglWidget::GetShaderUniformPara()
 {
     m_posAttr = m_Program->attributeLocation("posAttr");
     m_colAttr = m_Program->attributeLocation("colAttr");
     m_matrixUniform = m_Program->uniformLocation("matrix");
     //m_norAttr = m_Program->attributeLocation("norAttr");
+}
+
+void MyQOpenglWidget::GetMeshShaderUniformPara()
+{
+    m_meshPosAttr = m_MeshProgram->attributeLocation("position");
+    m_meshNorAttr = m_MeshProgram->attributeLocation("normal");
+    m_meshMatrixUniform = m_MeshProgram->uniformLocation("mvp_matrix");
+    m_meshViewMatrixUniform = m_MeshProgram->uniformLocation("view_matrix");
+    m_meshLightPosUniform = m_MeshProgram->uniformLocation("light_position");
+    m_meshLightColorUniform = m_MeshProgram->uniformLocation("light_color");
+    m_meshAmbientUniform = m_MeshProgram->uniformLocation("ambient_strength");
 }
 
 void MyQOpenglWidget::paintGL()
@@ -753,56 +816,69 @@ void MyQOpenglWidget::renderAxis()
 
 void MyQOpenglWidget::renderMesh()
 {
-    if (!m_modelManager) return;
+    if (!m_modelManager || !m_MeshProgram) return;
     
-    // 保存当前shader程序
-    GLint currentProgram = 0;
-    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+    // 使用mesh着色器
+    m_MeshProgram->bind();
     
-    // 禁用当前shader程序，切换到固定管线渲染
-    glUseProgram(0);
+    // 计算变换矩阵
+    QMatrix4x4 matrix;
+    QMatrix4x4 matrixPerspect;
+    QMatrix4x4 matrixView;
+    QMatrix4x4 matrixModel;
+
+    // 使用移动后的包围盒参数
+    QVector3D minPos = m_box.getMinPoint();
+    QVector3D maxPos = m_box.getMaxPoint();
+    float maxRange = qMax(qMax(m_box.width(), m_box.height()), m_box.depth());
+
+    // 计算点云的最大半径（从原点到最远点的距离）
+    float maxRadius = qMax(qMax(qAbs(minPos.x()), qAbs(maxPos.x())),
+                           qMax(qMax(qAbs(minPos.y()), qAbs(maxPos.y())),
+                                qMax(qAbs(minPos.z()), qAbs(maxPos.z()))));
+
+    // 考虑旋转后的最大范围（对角线长度）
+    float diagonalLength = QVector3D(maxPos - minPos).length();
+    float safeRange = qMax(maxRadius, diagonalLength * 0.6f);
+    float projectionRange = safeRange * 1.5f;
+
+    // 设置正交投影
+    matrixPerspect.ortho(
+        -projectionRange,
+        projectionRange,
+        -projectionRange,
+        projectionRange,
+        -maxRange * 10,
+        maxRange * 10
+        );
+
+    // 调整视图矩阵
+    float cameraDistance = qMax(maxRange * 3.0f, diagonalLength * 2.0f);
+    matrixView.lookAt(QVector3D(0, 0, cameraDistance), QVector3D(0, 0, 0), QVector3D(0, 1, 0));
+    matrixView.translate(m_lineMove);
+
+    // 模型矩阵
+    matrixModel.scale(m_scale);
+    matrixModel.rotate(m_rotate);
+
+    matrix = matrixPerspect * matrixView * matrixModel;
     
-    // 保存当前矩阵模式
-    GLint matrixMode;
-    glGetIntegerv(GL_MATRIX_MODE, &matrixMode);
-    
-    // 设置投影矩阵
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    
-    QMatrix4x4 projMatrix;
-    projMatrix.perspective(60.0f, (float)width() / height(), 0.01f, 100.0f);
-    glLoadMatrixf(projMatrix.data());
-    
-    // 设置模型视图矩阵
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-    
-    QMatrix4x4 mvMatrix;
-    mvMatrix.lookAt(QVector3D(0, 0, 2), QVector3D(0, 0, 0), QVector3D(0, 1, 0));
-    mvMatrix.translate(m_lineMove);
-    mvMatrix.rotate(m_rotate);
-    mvMatrix.scale(m_scale);
-    glLoadMatrixf(mvMatrix.data());
+    // 设置着色器参数
+    m_MeshProgram->setUniformValue(m_meshMatrixUniform, matrix);
+    m_MeshProgram->setUniformValue(m_meshViewMatrixUniform, matrixView);
+    m_MeshProgram->setUniformValue(m_meshLightPosUniform, QVector3D(1.0f, 1.0f, 1.0f));
+    m_MeshProgram->setUniformValue(m_meshLightColorUniform, QVector3D(1.0f, 1.0f, 1.0f));
+    m_MeshProgram->setUniformValue(m_meshAmbientUniform, 0.3f);
     
     // 启用深度测试
     glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
     
     // 渲染mesh模型
-    m_modelManager->renderTheModel();
+    m_modelManager->renderWithShader(m_meshPosAttr, m_meshNorAttr);
     
-    // 恢复OpenGL状态
-    glPopMatrix(); // 恢复modelview矩阵
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix(); // 恢复projection矩阵
-    
-    // 恢复原来的矩阵模式
-    glMatrixMode(matrixMode);
-    
-    // 恢复shader程序
-    glUseProgram(currentProgram);
+    // 恢复状态
+    m_MeshProgram->release();
 }
 
 // 新增的mesh相关功能实现
@@ -855,17 +931,7 @@ void MyQOpenglWidget::initMeshGL()
 {
     // 初始化mesh渲染所需的OpenGL设置
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    
-    // 设置光照参数
-    GLfloat light_position[] = {1.0f, 1.0f, 1.0f, 0.0f};
-    GLfloat light_ambient[] = {0.2f, 0.2f, 0.2f, 1.0f};
-    GLfloat light_diffuse[] = {0.8f, 0.8f, 0.8f, 1.0f};
-    
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+    glDepthFunc(GL_LESS);
 }
 
 
