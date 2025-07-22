@@ -1,0 +1,3 @@
+"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\Segmentation.dir/objects.a
+C:\Apps\mingw64\bin\ar.exe qc CMakeFiles\Segmentation.dir/objects.a @CMakeFiles\Segmentation.dir\objects1.rsp
+C:\Apps\mingw64\bin\c++.exe -static -Wl,--whole-archive CMakeFiles\Segmentation.dir/objects.a -Wl,--no-whole-archive -o Segmentation.exe -Wl,--out-implib,libSegmentation.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\Segmentation.dir\linkLibs.rsp

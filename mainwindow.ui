@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1177</width>
+    <height>761</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QWidget" name="verticalLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>-1</x>
+      <y>-1</y>
+      <width>221</width>
+      <height>731</height>
+     </rect>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QTreeView" name="treeView"/>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QTabWidget" name="tabWidget">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>0</y>
+      <width>941</width>
+      <height>721</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>1</number>
+    </property>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>Tab </string>
+     </attribute>
+     <widget class="OpenglWindow" name="widget_2" native="true">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>30</y>
+        <width>891</width>
+        <height>651</height>
+       </rect>
+      </property>
+      <property name="focusPolicy">
+       <enum>Qt::FocusPolicy::ClickFocus</enum>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_2">
+     <attribute name="title">
+      <string>Point Cloud</string>
+     </attribute>
+     <widget class="QOpenGLWidget" name="openGLWidget">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>20</y>
+        <width>891</width>
+        <height>651</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButtonX">
+      <property name="geometry">
+       <rect>
+        <x>800</x>
+        <y>0</y>
+        <width>21</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>X</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButtonY">
+      <property name="geometry">
+       <rect>
+        <x>840</x>
+        <y>0</y>
+        <width>21</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Y</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButtonZ">
+      <property name="geometry">
+       <rect>
+        <x>880</x>
+        <y>0</y>
+        <width>21</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Z</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_7">
+     <attribute name="title">
+      <string>Mesh</string>
+     </attribute>
+     <widget class="OpenglWindow" name="widget" native="true">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>20</y>
+        <width>891</width>
+        <height>651</height>
+       </rect>
+      </property>
+      <property name="focusPolicy">
+       <enum>Qt::FocusPolicy::ClickFocus</enum>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1177</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionNew"/>
+    <addaction name="actionOpen"/>
+    <addaction name="actionAdd"/>
+    <addaction name="actionOpen_PLY"/>
+    <addaction name="actionVectorization_2"/>
+    <addaction name="actionClearPointCloud"/>
+    <addaction name="actionLineView"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuVive">
+    <property name="title">
+     <string>View</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuAnalyze">
+    <property name="title">
+     <string>Analyze</string>
+    </property>
+    <widget class="QMenu" name="menuTexture">
+     <property name="title">
+      <string>Texture</string>
+     </property>
+     <addaction name="actionTextureOn"/>
+     <addaction name="actionTextureOff"/>
+    </widget>
+    <widget class="QMenu" name="menuColor">
+     <property name="title">
+      <string>Color</string>
+     </property>
+     <addaction name="actionColorNone"/>
+     <addaction name="actionColorRed"/>
+     <addaction name="actionColorGreen"/>
+    </widget>
+    <widget class="QMenu" name="menuSubdivision">
+     <property name="title">
+      <string>Subdivision</string>
+     </property>
+     <addaction name="actionSubdivisionOn"/>
+     <addaction name="actionSubdivisionOff"/>
+    </widget>
+    <widget class="QMenu" name="menuTransform">
+     <property name="title">
+      <string>Transform</string>
+     </property>
+     <addaction name="actionRotate"/>
+     <addaction name="actionTranslate"/>
+    </widget>
+    <widget class="QMenu" name="menuDisplay_Mode">
+     <property name="title">
+      <string>Display Mode</string>
+     </property>
+     <addaction name="actionWireframe"/>
+     <addaction name="actionFlat"/>
+     <addaction name="actionFlatlines"/>
+    </widget>
+    <widget class="QMenu" name="menuShading_Mode">
+     <property name="title">
+      <string>Shading Mode</string>
+     </property>
+     <addaction name="actionGouraud_Shading"/>
+     <addaction name="actionPhong_Shading"/>
+     <addaction name="actionFlat_Shading"/>
+    </widget>
+    <addaction name="menuDisplay_Mode"/>
+    <addaction name="menuShading_Mode"/>
+    <addaction name="menuTexture"/>
+    <addaction name="menuColor"/>
+    <addaction name="menuTransform"/>
+    <addaction name="menuSubdivision"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actiongenerate_floorplan_with_texture"/>
+   </widget>
+   <widget class="QMenu" name="menuOther">
+    <property name="title">
+     <string>Other</string>
+    </property>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuVive"/>
+   <addaction name="menuAnalyze"/>
+   <addaction name="menuTools"/>
+   <addaction name="menuOther"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionNew">
+   <property name="text">
+    <string>New Project</string>
+   </property>
+  </action>
+  <action name="actionOpen">
+   <property name="text">
+    <string>Open Project</string>
+   </property>
+  </action>
+  <action name="actionAdd">
+   <property name="text">
+    <string>Add  File</string>
+   </property>
+  </action>
+  <action name="actionOpen_PLY">
+   <property name="text">
+    <string>Open PLY</string>
+   </property>
+  </action>
+  <action name="actionVectorization_2">
+   <property name="text">
+    <string>Vectorization</string>
+   </property>
+  </action>
+  <action name="actionTextureOn">
+   <property name="text">
+    <string>TextureOn</string>
+   </property>
+  </action>
+  <action name="actionTextureOff">
+   <property name="text">
+    <string>TextureOff</string>
+   </property>
+  </action>
+  <action name="actionColorNone">
+   <property name="text">
+    <string>ColorNone</string>
+   </property>
+  </action>
+  <action name="actionColorRed">
+   <property name="text">
+    <string>ColorRed</string>
+   </property>
+  </action>
+  <action name="actionColorGreen">
+   <property name="text">
+    <string>ColorGreen</string>
+   </property>
+  </action>
+  <action name="actionSubdiss">
+   <property name="text">
+    <string>SubdivisionOn</string>
+   </property>
+  </action>
+  <action name="actionSubdis">
+   <property name="text">
+    <string>SubdivisionOff</string>
+   </property>
+  </action>
+  <action name="actionSubdivisionOn">
+   <property name="text">
+    <string>SubdivisionOn</string>
+   </property>
+  </action>
+  <action name="actionSubdivisionOff">
+   <property name="text">
+    <string>SubdivisionOff</string>
+   </property>
+  </action>
+  <action name="actionRotate">
+   <property name="text">
+    <string>Rotate</string>
+   </property>
+  </action>
+  <action name="actionTranslate">
+   <property name="text">
+    <string>Translate</string>
+   </property>
+  </action>
+  <action name="actionWireframe">
+   <property name="text">
+    <string>Wireframe</string>
+   </property>
+  </action>
+  <action name="actionFlat">
+   <property name="text">
+    <string>Flat</string>
+   </property>
+  </action>
+  <action name="actionFlatlines">
+   <property name="text">
+    <string>Flatlines</string>
+   </property>
+  </action>
+  <action name="actionGouraud_Shading">
+   <property name="text">
+    <string>Gouraud_Shading</string>
+   </property>
+  </action>
+  <action name="actionPhong_Shading">
+   <property name="text">
+    <string>Phong_Shading</string>
+   </property>
+  </action>
+  <action name="actionFlat_Shading">
+   <property name="text">
+    <string>Flat_Shading</string>
+   </property>
+  </action>
+  <action name="actionClearPointCloud">
+   <property name="text">
+    <string>ClearPointCloud</string>
+   </property>
+  </action>
+  <action name="actionLineView">
+   <property name="text">
+    <string>LineView</string>
+   </property>
+  </action>
+  <action name="actiongenerate_floorplan_with_texture">
+   <property name="text">
+    <string>generate_floorplan_with_texture</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>OpenglWindow</class>
+   <extends>QWidget</extends>
+   <header>openglwindow.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

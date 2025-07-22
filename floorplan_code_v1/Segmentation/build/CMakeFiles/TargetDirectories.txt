@@ -1,0 +1,3 @@
+C:/SLAM/floorplan_code_v1/Segmentation/build/CMakeFiles/Segmentation.dir
+C:/SLAM/floorplan_code_v1/Segmentation/build/CMakeFiles/edit_cache.dir
+C:/SLAM/floorplan_code_v1/Segmentation/build/CMakeFiles/rebuild_cache.dir

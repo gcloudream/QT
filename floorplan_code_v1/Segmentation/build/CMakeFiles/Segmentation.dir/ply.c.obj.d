@@ -1,0 +1,29 @@
+CMakeFiles/Segmentation.dir/ply.c.obj: \
+ C:\SLAM\floorplan_code_v1\Segmentation\ply.c \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/stdio.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/corecrt_stdio_config.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/corecrt.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/_mingw.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/_mingw_mac.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/_mingw_secapi.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/vadefs.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/sdks/_mingw_ddk.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/_mingw_off_t.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/swprintf.inl \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/sec_api/stdio_s.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/stdlib.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/corecrt_wstdlib.h \
+ C:/Apps/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/limits.h \
+ C:/Apps/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/syslimits.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/limits.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/crtdefs.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/sec_api/stdlib_s.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/malloc.h \
+ C:/Apps/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/mm_malloc.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/errno.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/math.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/string.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/sec_api/string_s.h \
+ C:\SLAM\floorplan_code_v1\Segmentation\ply.h \
+ C:/Apps/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/stddef.h \
+ C:/Apps/mingw64/x86_64-w64-mingw32/include/stddef.h
