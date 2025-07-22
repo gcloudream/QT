@@ -755,20 +755,37 @@ void MyQOpenglWidget::renderMesh()
 {
     if (!m_modelManager) return;
     
-    // 保存当前OpenGL状态
-    glPushMatrix();
+    // 保存当前shader程序
+    GLint currentProgram = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
     
-    // 应用与点云相同的变换矩阵
-    QMatrix4x4 matrix;
-    matrix.perspective(60.0f, (float)width() / height(), 0.01f, 100.0f);
-    matrix.lookAt(QVector3D(0, 0, 2), QVector3D(0, 0, 0), QVector3D(0, 1, 0));
-    matrix.translate(m_lineMove);
-    matrix.rotate(m_rotate);
-    matrix.scale(m_scale);
-
-    // 设置MVP矩阵
+    // 禁用当前shader程序，切换到固定管线渲染
+    glUseProgram(0);
+    
+    // 保存当前矩阵模式
+    GLint matrixMode;
+    glGetIntegerv(GL_MATRIX_MODE, &matrixMode);
+    
+    // 设置投影矩阵
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    QMatrix4x4 projMatrix;
+    projMatrix.perspective(60.0f, (float)width() / height(), 0.01f, 100.0f);
+    glLoadMatrixf(projMatrix.data());
+    
+    // 设置模型视图矩阵
     glMatrixMode(GL_MODELVIEW);
-    glLoadMatrixf(matrix.data());
+    glPushMatrix();
+    glLoadIdentity();
+    
+    QMatrix4x4 mvMatrix;
+    mvMatrix.lookAt(QVector3D(0, 0, 2), QVector3D(0, 0, 0), QVector3D(0, 1, 0));
+    mvMatrix.translate(m_lineMove);
+    mvMatrix.rotate(m_rotate);
+    mvMatrix.scale(m_scale);
+    glLoadMatrixf(mvMatrix.data());
     
     // 启用深度测试
     glEnable(GL_DEPTH_TEST);
@@ -777,7 +794,15 @@ void MyQOpenglWidget::renderMesh()
     m_modelManager->renderTheModel();
     
     // 恢复OpenGL状态
-    glPopMatrix();
+    glPopMatrix(); // 恢复modelview矩阵
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix(); // 恢复projection矩阵
+    
+    // 恢复原来的矩阵模式
+    glMatrixMode(matrixMode);
+    
+    // 恢复shader程序
+    glUseProgram(currentProgram);
 }
 
 // 新增的mesh相关功能实现

@@ -258,6 +258,11 @@ void ModelManager::getBoundingBoxRecursive(const struct aiNode* nd, aiMatrix4x4*
 
 // 修改后的renderTheModel方法
 void ModelManager::renderTheModel() {
+    // 检查场景是否已加载
+    if (!scene || !scene->mRootNode) {
+        return; // 如果没有加载模型，直接返回
+    }
+    
     // 设置基本的OpenGL状态
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);  // 临时禁用背面剔除以显示所有面
@@ -269,6 +274,9 @@ void ModelManager::renderTheModel() {
 }
 // 修改后的recursiveRender方法
 void ModelManager::recursiveRender(const struct aiScene *sc, const struct aiNode* nd) {
+    // 添加安全检查
+    if (!sc || !nd) return;
+    
     aiMatrix4x4 mTrans = nd->mTransformation;
 
     // 更新每个节点的变换方式
