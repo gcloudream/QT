@@ -13,6 +13,7 @@
 #include <QMenuBar>
 #include <QVBoxLayout>
 #include <QKeySequence>
+#include <QProgressDialog>
 #include <QFileInfo>
 #include <QStackedWidget>
 #include <QPushButton>
@@ -408,20 +409,30 @@ void MainWindow::onImportModelTriggered()
     // 弹出文件选择对话框
     QString filePath = QFileDialog::getOpenFileName(
         this,
-        "选择模型配置文件",
+        "选择Mesh模型文件",
         QDir::homePath(),
-        "配置文件 (*.txt);;所有文件 (*.*)"
+        "模型文件 (*.dae *.obj *.fbx *.3ds *.ply *.stl);;所有文件 (*.*)"
         );
 
     if (filePath.isEmpty()) {
         qDebug() << "用户取消选择";
         return;
     }
+
+    // 显示加载进度
+    QProgressDialog progress("正在加载模型...", "取消", 0, 0, this);
+    progress.setWindowModality(Qt::WindowModal);
+    progress.show();
+    QApplication::processEvents();
+
     // 传递路径到 OpenGL 窗口
     if (m_pOpenglWidget->loadMeshModel(filePath)) {
+        progress.close();
         qDebug() << "模型加载成功：" << filePath;
+        QMessageBox::information(this, "成功", QString("模型加载成功！\n文件: %1").arg(QFileInfo(filePath).fileName()));
     } else {
-        QMessageBox::critical(this, "错误", "无法加载模型文件");
+        progress.close();
+        QMessageBox::critical(this, "错误", QString("无法加载模型文件！\n请检查文件格式和路径：\n%1").arg(filePath));
     }
 }
 void MainWindow::onImportModelTriggered2()
@@ -429,7 +440,7 @@ void MainWindow::onImportModelTriggered2()
     // 1. 获取选中的文件路径
     QModelIndex currentIndex = ui->treeView->currentIndex();
     if (!currentIndex.isValid() || !m_dirModel) {  // 添加模型检查
-        QMessageBox::warning(this, "未选择文件", "请先在目录树中选择一个dae或obj文件");
+        QMessageBox::warning(this, "未选择文件", "请先在目录树中选择一个Mesh模型文件");
         return;
     }
 
@@ -442,16 +453,29 @@ void MainWindow::onImportModelTriggered2()
         return;
     }
 
-    if (fileInfo.suffix().toLower() != "dae"&&fileInfo.suffix().toLower() != "obj") {
+    QString suffix = fileInfo.suffix().toLower();
+    QStringList supportedFormats = {"dae", "obj", "fbx", "3ds", "ply", "stl"};
+    if (!supportedFormats.contains(suffix)) {
         QMessageBox::warning(this, "格式错误",
-                             QString("仅支持dae或obj文件，当前文件类型: .%1").arg(fileInfo.suffix()));
+                             QString("支持的模型格式: %1\n当前文件类型: .%2")
+                             .arg(supportedFormats.join(", "))
+                             .arg(fileInfo.suffix()));
         return;
     }
 
+    // 显示加载进度
+    QProgressDialog progress("正在加载模型...", "取消", 0, 0, this);
+    progress.setWindowModality(Qt::WindowModal);
+    progress.show();
+    QApplication::processEvents();
+
     if (m_pOpenglWidget && m_pOpenglWidget->loadMeshModel(filePath)) {
+        progress.close();
         qDebug() << "模型加载成功：" << filePath;
+        QMessageBox::information(this, "成功", QString("模型加载成功！\n文件: %1").arg(fileInfo.fileName()));
     } else {
-        QMessageBox::critical(this, "错误", "无法加载模型文件");
+        progress.close();
+        QMessageBox::critical(this, "错误", QString("无法加载模型文件！\n请检查文件格式和路径：\n%1").arg(filePath));
     }
 }
 

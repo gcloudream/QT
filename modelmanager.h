@@ -1,11 +1,13 @@
 #ifndef MODELMANAGER_H
 #define MODELMANAGER_H
 
-// Use Qt's OpenGL support for OpenGL types  
+// Qt includes - order matters for proper type definitions
+#include <QtGui/QVector3D>
 #include <QtGui/qopengl.h>
 #include <QOpenGLFunctions>
 
 #include <IL/il.h>
+#include <QFile>
 
 #include <assimp/cimport.h>
 #include <assimp/postprocess.h>
@@ -13,7 +15,6 @@
 
 #include <string.h>
 #include <map>
-#include <iostream>
 using namespace std;
 
 enum TextureState { TextureOn, TextureOff};
@@ -45,6 +46,13 @@ public:
     void renderPointFace(const struct aiMesh* mesh, const struct aiFace* face);
 
     aiVector3D scene_min, scene_max, scene_center;
+    
+    // 获取模型包围盒信息的公共接口
+    QVector3D getSceneMin() const { return QVector3D(scene_min.x, scene_min.y, scene_min.z); }
+    QVector3D getSceneMax() const { return QVector3D(scene_max.x, scene_max.y, scene_max.z); }
+    QVector3D getSceneCenter() const { return QVector3D(scene_center.x, scene_center.y, scene_center.z); }
+    float getSceneRadius() const;
+    bool hasScene() const { return scene != nullptr; }
 
 private:
 

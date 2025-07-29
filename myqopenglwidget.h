@@ -174,6 +174,7 @@ private:
     
     // mesh渲染函数
     void renderMesh();
+    void renderTestTriangle(); // 测试三角形渲染
     void initMeshGL();
 
 

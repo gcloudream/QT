@@ -18,7 +18,7 @@ static const char *fragmentShaderSource =
     "   gl_FragColor = col;\n"
     "}\n";
 
-// Mesh渲染着色器
+// Mesh渲染着色器 - 改进版本
 static const char *meshVertexShaderSource =
     "attribute highp vec3 position;\n"
     "attribute highp vec3 normal;\n"
@@ -31,7 +31,7 @@ static const char *meshVertexShaderSource =
     "void main() {\n"
     "    gl_Position = mvp_matrix * vec4(position, 1.0);\n"
     "    \n"
-    "    // 计算光照\n"
+    "    // 改进的光照计算\n"
     "    vec3 norm = normalize(normal);\n"
     "    vec3 light_dir = normalize(light_position - position);\n"
     "    \n"
@@ -40,10 +40,11 @@ static const char *meshVertexShaderSource =
     "    \n"
     "    // 漫反射\n"
     "    float diff = max(dot(norm, light_dir), 0.0);\n"
-    "    vec3 diffuse = diff * light_color;\n"
+    "    vec3 diffuse = diff * light_color * 0.8;\n"
     "    \n"
-    "    // 最终颜色\n"
-    "    vec3 result = (ambient + diffuse) * vec3(0.8, 0.8, 0.8);\n"
+    "    // 使用更好的材质颜色\n"
+    "    vec3 object_color = vec3(0.9, 0.8, 0.6); // 金黄色\n"
+    "    vec3 result = (ambient + diffuse) * object_color;\n"
     "    fragment_color = vec4(result, 1.0);\n"
     "}\n";
 
@@ -492,11 +493,59 @@ bool MyQOpenglWidget::InitShader()
 
 bool MyQOpenglWidget::InitMeshShader()
 {
+    qDebug() << "=== Initializing Mesh Shader ===";
+    
     bool success = true;
-    success &= m_MeshProgram->addShaderFromSourceCode(QOpenGLShader::Vertex, meshVertexShaderSource);
-    success &= m_MeshProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, meshFragmentShaderSource);
-    success &= m_MeshProgram->link();
-    GetMeshShaderUniformPara();
+    
+    // 编译顶点着色器
+    if (!m_MeshProgram->addShaderFromSourceCode(QOpenGLShader::Vertex, meshVertexShaderSource)) {
+        qDebug() << "ERROR: Failed to compile vertex shader!";
+        qDebug() << "Vertex shader log:" << m_MeshProgram->log();
+        success = false;
+    } else {
+        qDebug() << "SUCCESS: Vertex shader compiled";
+    }
+    
+    // 编译片段着色器
+    if (!m_MeshProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, meshFragmentShaderSource)) {
+        qDebug() << "ERROR: Failed to compile fragment shader!";
+        qDebug() << "Fragment shader log:" << m_MeshProgram->log();
+        success = false;
+    } else {
+        qDebug() << "SUCCESS: Fragment shader compiled";
+    }
+    
+    // 链接着色器程序
+    if (!m_MeshProgram->link()) {
+        qDebug() << "ERROR: Failed to link shader program!";
+        qDebug() << "Link log:" << m_MeshProgram->log();
+        success = false;
+    } else {
+        qDebug() << "SUCCESS: Shader program linked";
+    }
+    
+    if (success) {
+        GetMeshShaderUniformPara();
+        
+        // 验证属性位置
+        qDebug() << "Shader attribute locations:";
+        qDebug() << "  position:" << m_meshPosAttr;
+        qDebug() << "  normal:" << m_meshNorAttr;
+        qDebug() << "Shader uniform locations:";
+        qDebug() << "  mvp_matrix:" << m_meshMatrixUniform;
+        qDebug() << "  view_matrix:" << m_meshViewMatrixUniform;
+        qDebug() << "  light_position:" << m_meshLightPosUniform;
+        qDebug() << "  light_color:" << m_meshLightColorUniform;
+        qDebug() << "  ambient_strength:" << m_meshAmbientUniform;
+        
+        // 检查是否有无效的位置
+        if (m_meshPosAttr == -1 || m_meshNorAttr == -1) {
+            qDebug() << "ERROR: Invalid attribute locations!";
+            success = false;
+        }
+    }
+    
+    qDebug() << "=== Mesh Shader Init Result:" << (success ? "SUCCESS" : "FAILED") << "===";
     return success;
 }
 
@@ -821,10 +870,29 @@ void MyQOpenglWidget::renderAxis()
 
 void MyQOpenglWidget::renderMesh()
 {
-    if (!m_modelManager || !m_MeshProgram) return;
+    qDebug() << "=== Starting Mesh Rendering ===";
+    
+    if (!m_modelManager || !m_MeshProgram) {
+        qDebug() << "ERROR: ModelManager or MeshProgram not available";
+        qDebug() << "  ModelManager:" << (m_modelManager ? "OK" : "NULL");
+        qDebug() << "  MeshProgram:" << (m_MeshProgram ? "OK" : "NULL");
+        return;
+    }
+    
+    // 检查是否有可用的mesh模型
+    if (!m_modelManager->hasScene()) {
+        qDebug() << "ERROR: No mesh scene available for rendering";
+        return;
+    }
+    
+    qDebug() << "SUCCESS: ModelManager and scene are available";
     
     // 使用mesh着色器
-    m_MeshProgram->bind();
+    if (!m_MeshProgram->bind()) {
+        qDebug() << "ERROR: Failed to bind mesh shader program";
+        return;
+    }
+    qDebug() << "SUCCESS: Mesh shader program bound";
     
     // 计算变换矩阵
     QMatrix4x4 matrix;
@@ -832,68 +900,169 @@ void MyQOpenglWidget::renderMesh()
     QMatrix4x4 matrixView;
     QMatrix4x4 matrixModel;
 
-    // 使用移动后的包围盒参数
-    QVector3D minPos = m_box.getMinPoint();
-    QVector3D maxPos = m_box.getMaxPoint();
-    float maxRange = qMax(qMax(m_box.width(), m_box.height()), m_box.depth());
-
-    // 计算点云的最大半径（从原点到最远点的距离）
-    float maxRadius = qMax(qMax(qAbs(minPos.x()), qAbs(maxPos.x())),
-                           qMax(qMax(qAbs(minPos.y()), qAbs(maxPos.y())),
-                                qMax(qAbs(minPos.z()), qAbs(maxPos.z()))));
-
-    // 考虑旋转后的最大范围（对角线长度）
-    float diagonalLength = QVector3D(maxPos - minPos).length();
-    float safeRange = qMax(maxRadius, diagonalLength * 0.6f);
-    float projectionRange = safeRange * 1.5f;
-
-    // 设置正交投影
-    matrixPerspect.ortho(
-        -projectionRange,
-        projectionRange,
-        -projectionRange,
-        projectionRange,
-        -maxRange * 10,
-        maxRange * 10
-        );
-
-    // 调整视图矩阵
-    float cameraDistance = qMax(maxRange * 3.0f, diagonalLength * 2.0f);
-    matrixView.lookAt(QVector3D(0, 0, cameraDistance), QVector3D(0, 0, 0), QVector3D(0, 1, 0));
+    // 使用mesh模型的包围盒参数
+    QVector3D sceneMin = m_modelManager->getSceneMin();
+    QVector3D sceneMax = m_modelManager->getSceneMax();
+    QVector3D sceneCenter = m_modelManager->getSceneCenter();
+    
+    qDebug() << "Scene bounds:";
+    qDebug() << "  Min:" << sceneMin;
+    qDebug() << "  Max:" << sceneMax;
+    qDebug() << "  Center:" << sceneCenter;
+    
+    // 计算场景大小
+    QVector3D sceneSize = sceneMax - sceneMin;
+    float maxSize = qMax(qMax(sceneSize.x(), sceneSize.y()), sceneSize.z());
+    qDebug() << "  Size:" << sceneSize << "MaxSize:" << maxSize;
+    
+    // 检查场景大小是否合理
+    if (maxSize <= 0.0f || maxSize > 10000.0f) {
+        qDebug() << "WARNING: Unusual scene size detected, using default values";
+        maxSize = 10.0f;
+        sceneCenter = QVector3D(0, 0, 0);
+    }
+    
+    // 改进的投影矩阵设置 - 使用透视投影
+    float fov = 45.0f;
+    float aspect = (float)width() / (float)height();
+    float nearPlane = maxSize * 0.01f;  // 更近的近平面
+    float farPlane = maxSize * 20.0f;   // 更远的远平面
+    
+    matrixPerspect.perspective(fov, aspect, nearPlane, farPlane);
+    qDebug() << "Projection setup - FOV:" << fov << "Aspect:" << aspect << "Near:" << nearPlane << "Far:" << farPlane;
+    
+    // 改进的视图矩阵 - 动态相机距离
+    float cameraDistance = maxSize * 2.5f; // 调整相机距离  
+    QVector3D cameraPos(0, 0, cameraDistance);
+    QVector3D targetPos(0, 0, 0);
+    QVector3D upVector(0, 1, 0);
+    
+    matrixView.lookAt(cameraPos, targetPos, upVector);
+    matrixView.rotate(m_rotate);
     matrixView.translate(m_lineMove);
+    
+    qDebug() << "Camera setup - Distance:" << cameraDistance << "Position:" << cameraPos;
 
-    // 模型矩阵
+    // 模型矩阵 - 先将模型中心移到原点，然后应用用户变换
+    matrixModel.translate(-sceneCenter);  // 将模型中心移到原点
     matrixModel.scale(m_scale);
     matrixModel.rotate(m_rotate);
 
     matrix = matrixPerspect * matrixView * matrixModel;
     
+    // 优化的光照设置 - 多个光源
+    QVector3D lightPos1 = sceneCenter + QVector3D(maxSize * 0.8f, maxSize * 0.8f, maxSize * 0.8f);
+    QVector3D lightPos2 = sceneCenter + QVector3D(-maxSize * 0.5f, maxSize * 0.5f, maxSize * 0.8f);
+    QVector3D finalLightPos = (lightPos1 + lightPos2) * 0.5f; // 取平均位置
+    
+    qDebug() << "Lighting setup:";
+    qDebug() << "  Light1:" << lightPos1;
+    qDebug() << "  Light2:" << lightPos2;
+    qDebug() << "  Final light pos:" << finalLightPos;
+    
     // 设置着色器参数
     m_MeshProgram->setUniformValue(m_meshMatrixUniform, matrix);
     m_MeshProgram->setUniformValue(m_meshViewMatrixUniform, matrixView);
-    m_MeshProgram->setUniformValue(m_meshLightPosUniform, QVector3D(1.0f, 1.0f, 1.0f));
-    m_MeshProgram->setUniformValue(m_meshLightColorUniform, QVector3D(1.0f, 1.0f, 1.0f));
-    m_MeshProgram->setUniformValue(m_meshAmbientUniform, 0.3f);
+    m_MeshProgram->setUniformValue(m_meshLightPosUniform, finalLightPos);
+    m_MeshProgram->setUniformValue(m_meshLightColorUniform, QVector3D(1.0f, 0.95f, 0.8f)); // 暖白光
+    m_MeshProgram->setUniformValue(m_meshAmbientUniform, 0.35f); // 适中的环境光
     
-    // 启用深度测试
+    qDebug() << "Shader uniforms set";
+    
+    // 优化的OpenGL状态设置
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glClearDepth(1.0f);
+    
+    // 禁用面剔除以确保所有面都被渲染
     glDisable(GL_CULL_FACE);
     
+    // 启用多重采样抗锯齿
+    glEnable(GL_MULTISAMPLE);
+    
+    // 设置合适的线宽和点大小
+    glLineWidth(1.0f);
+    glPointSize(1.0f);
+    
+    qDebug() << "OpenGL states configured";
+    
+    // 清除OpenGL错误
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        qDebug() << "OpenGL error before rendering:" << QString::number(error, 16);
+    }
+    
     // 渲染mesh模型
+    qDebug() << "Calling ModelManager renderWithShader...";
     m_modelManager->renderWithShader(m_meshPosAttr, m_meshNorAttr);
     
+    // 检查渲染后的OpenGL错误
+    error = glGetError();
+    if (error != GL_NO_ERROR) {
+        qDebug() << "OpenGL error after rendering:" << QString::number(error, 16);
+    }
+    
     // 恢复状态
+    glDisable(GL_MULTISAMPLE);
     m_MeshProgram->release();
+    
+    qDebug() << "=== Mesh Rendering Complete ===";
+}
+
+// 新增：测试三角形渲染
+void MyQOpenglWidget::renderTestTriangle()
+{
+    qDebug() << "Rendering test triangle...";
+    
+    // 简单的测试三角形顶点数据
+    static const GLfloat testVertices[] = {
+        0.0f,  0.5f, 0.0f,  // 顶部
+        -0.5f, -0.5f, 0.0f, // 左下
+        0.5f, -0.5f, 0.0f   // 右下
+    };
+    
+    static const GLfloat testNormals[] = {
+        0.0f, 0.0f, 1.0f,   // 所有法向量都指向z正方向
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f
+    };
+    
+    // 启用顶点属性数组
+    glEnableVertexAttribArray(m_meshPosAttr);
+    glEnableVertexAttribArray(m_meshNorAttr);
+    
+    // 绑定顶点数据
+    glVertexAttribPointer(m_meshPosAttr, 3, GL_FLOAT, GL_FALSE, 0, testVertices);
+    glVertexAttribPointer(m_meshNorAttr, 3, GL_FLOAT, GL_FALSE, 0, testNormals);
+    
+    // 绘制测试三角形
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    
+    // 禁用顶点属性数组
+    glDisableVertexAttribArray(m_meshPosAttr);
+    glDisableVertexAttribArray(m_meshNorAttr);
+    
+    qDebug() << "Test triangle rendered";
 }
 
 // 新增的mesh相关功能实现
 bool MyQOpenglWidget::loadMeshModel(const QString& modelPath)
 {
-    if (!m_modelManager) return false;
+    if (!m_modelManager) {
+        qDebug() << "ERROR: ModelManager not initialized";
+        return false;
+    }
+    
+    qDebug() << "Loading mesh model:" << modelPath;
     
     bool success = m_modelManager->importModel(modelPath.toStdString());
     if (success) {
+        qDebug() << "Model loaded successfully, switching to MeshOnly view mode";
+        // 自动切换到mesh显示模式
+        setViewMode(ViewMode::MeshOnly);
         update(); // 触发重绘
+    } else {
+        qDebug() << "Failed to load model:" << modelPath;
     }
     return success;
 }

@@ -50,6 +50,13 @@ void ModelManager::initializeGL() {
     glFrontFace(GL_CCW);  // 设置正面为逆时针
 }
 
+float ModelManager::getSceneRadius() const {
+    if (!scene) return 1.0f;
+    
+    aiVector3D size = scene_max - scene_min;
+    return qMax(qMax(size.x, size.y), size.z) * 0.5f;
+}
+
 ModelManager::~ModelManager() {
     textureIdMap.clear();
 
@@ -67,46 +74,77 @@ string getBasePath(const string& path) {
 }
 
 bool ModelManager::importModel(const string& pFilepath) {
-    // ifstream modelFilePath(pFile.c_str());
-    // if (modelFilePath.fail()) {
-    //     cout << "Error::could not read model path file." << endl;
-    //     return false;
-    // }
-
-    // int modelCount = 4;
-    // while (getline(modelFilePath, modelPath)) {
-    //     if (modelPath.empty()) {
-    //         cout << "Error::model path empty." << endl;
-    //         return false;
-    //     }
-    //     else if (modelPath[0] == '#') {
-    //         cout << "Next Line" << endl;
-    //     }
-    //     else {
-    //         cout << "modelPath " << modelPath << endl;
-    //         break;
-    //     }
-
-    //     modelCount--;
-    //     if (modelCount <= 0)
-    //         return false;
-    // }
-    // modelFilePath.close();
-    // modelPath=;
-    // qDebug() <<modelPath<<"123";
-
-    scene = aiImportFile(pFilepath.c_str(), aiProcessPreset_TargetRealtime_MaxQuality);
-
-
-    if (!scene)
+    cout << "=== Starting Model Import ===" << endl;
+    cout << "File path: " << pFilepath << endl;
+    
+    // 检查文件是否存在
+    QFile file(QString::fromStdString(pFilepath));
+    if (!file.exists()) {
+        cout << "ERROR: File does not exist: " << pFilepath << endl;
         return false;
-    else {
-        cout << "Import successfully!" << endl;
-        getBoundingBox();
-        scene_center.x = (scene_min.x + scene_max.x) / 2.0f;    //设置模型的中心
-        scene_center.y = (scene_min.y + scene_max.y) / 2.0f;
-        scene_center.z = (scene_min.z + scene_max.z) / 2.0f;
     }
+    
+    // 释放之前的场景
+    if (scene) {
+        aiReleaseImport(scene);
+        scene = nullptr;
+    }
+    
+    // 使用更详细的导入标志
+    unsigned int importFlags = 
+        aiProcess_Triangulate |
+        aiProcess_GenNormals |
+        aiProcess_ValidateDataStructure |
+        aiProcess_ImproveCacheLocality |
+        aiProcess_RemoveRedundantMaterials |
+        aiProcess_FixInfacingNormals |
+        aiProcess_OptimizeMeshes;
+    
+    cout << "Import flags: 0x" << hex << importFlags << dec << endl;
+    
+    scene = aiImportFile(pFilepath.c_str(), importFlags);
+
+    if (!scene) {
+        cout << "ERROR: Failed to import model!" << endl;
+        cout << "Assimp error: " << aiGetErrorString() << endl;
+        return false;
+    }
+    
+    // 详细的成功信息
+    cout << "SUCCESS: Model imported successfully!" << endl;
+    cout << "Scene info:" << endl;
+    cout << "  - Meshes: " << scene->mNumMeshes << endl;
+    cout << "  - Materials: " << scene->mNumMaterials << endl;
+    cout << "  - Animations: " << scene->mNumAnimations << endl;
+    cout << "  - Textures: " << scene->mNumTextures << endl;
+    
+    // 检查mesh详细信息
+    for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
+        const aiMesh* mesh = scene->mMeshes[i];
+        cout << "  Mesh[" << i << "]: " << mesh->mNumVertices << " vertices, " 
+             << mesh->mNumFaces << " faces" << endl;
+        if (!mesh->mNormals) {
+            cout << "    WARNING: Mesh has no normals!" << endl;
+        }
+    }
+    
+    // 计算包围盒
+    getBoundingBox();
+    scene_center.x = (scene_min.x + scene_max.x) / 2.0f;
+    scene_center.y = (scene_min.y + scene_max.y) / 2.0f;
+    scene_center.z = (scene_min.z + scene_max.z) / 2.0f;
+    
+    cout << "Bounding Box:" << endl;
+    cout << "  Min: (" << scene_min.x << ", " << scene_min.y << ", " << scene_min.z << ")" << endl;
+    cout << "  Max: (" << scene_max.x << ", " << scene_max.y << ", " << scene_max.z << ")" << endl;
+    cout << "  Center: (" << scene_center.x << ", " << scene_center.y << ", " << scene_center.z << ")" << endl;
+    
+    aiVector3D size = scene_max - scene_min;
+    float radius = qMax(qMax(size.x, size.y), size.z) * 0.5f;
+    cout << "  Size: (" << size.x << ", " << size.y << ", " << size.z << ")" << endl;
+    cout << "  Radius: " << radius << endl;
+    
+    cout << "=== Model Import Complete ===" << endl;
     return true;
 }
 
@@ -791,13 +829,31 @@ void ModelManager::renderPointFace(const struct aiMesh* mesh, const struct aiFac
 // 新增：使用着色器的渲染方法
 void ModelManager::renderWithShader(GLuint posAttr, GLuint norAttr) {
     if (!scene || !scene->mRootNode) {
+        cout << "ERROR: No scene or root node available for rendering" << endl;
         return;
     }
+    
+    cout << "Starting shader rendering - meshes: " << scene->mNumMeshes << endl;
+    cout << "Shader attributes - position: " << posAttr << ", normal: " << norAttr << endl;
     
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     
+    // 清除任何OpenGL错误
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        cout << "OpenGL error before rendering: " << error << endl;
+    }
+    
     recursiveRenderWithShader(scene, scene->mRootNode, posAttr, norAttr);
+    
+    // 检查渲染后的错误
+    error = glGetError();
+    if (error != GL_NO_ERROR) {
+        cout << "OpenGL error after rendering: " << error << endl;
+    }
+    
+    cout << "Shader rendering complete" << endl;
 }
 
 // 新增：着色器递归渲染
@@ -828,32 +884,49 @@ void ModelManager::recursiveRenderWithShader(const struct aiScene *sc, const str
     glPopMatrix();
 }
 
-// 新增：着色器面处理
+// 重构：着色器面处理 - 正确的shader渲染方式
 void ModelManager::processFaceWithShader(const struct aiMesh* mesh, const struct aiFace* face, GLuint posAttr, GLuint norAttr) {
-    if (face->mNumIndices != 3) return; // 只处理三角形
+    if (face->mNumIndices != 3) {
+        cout << "WARNING: Non-triangle face with " << face->mNumIndices << " indices skipped" << endl;
+        return; // 只处理三角形
+    }
+    
+    static int faceCount = 0;
+    faceCount++;
+    if (faceCount <= 5) { // 只打印前5个面的调试信息
+        cout << "Processing face " << faceCount << " with indices: " 
+             << face->mIndices[0] << ", " << face->mIndices[1] << ", " << face->mIndices[2] << endl;
+    }
+    
+    // 启用顶点属性数组
+    glEnableVertexAttribArray(posAttr);
+    glEnableVertexAttribArray(norAttr);
     
     // 准备顶点数据
-    GLfloat vertices[9];  // 3个顶点 * 3个坐标
-    GLfloat normals[9];   // 3个法向量 * 3个坐标
+    GLfloat vertices[9]; // 3个顶点 * 3个坐标
+    GLfloat normals[9];  // 3个顶点 * 3个法向量分量
     
     for (int i = 0; i < 3; i++) {
         int index = face->mIndices[i];
         
         // 检查索引是否有效
         if (static_cast<unsigned int>(index) >= mesh->mNumVertices) {
+            cout << "ERROR: Invalid vertex index " << index << " >= " << mesh->mNumVertices << endl;
+            glDisableVertexAttribArray(posAttr);
+            glDisableVertexAttribArray(norAttr);
             return;
         }
         
-        // 填充顶点数据
-        vertices[i*3 + 0] = mesh->mVertices[index].x;
-        vertices[i*3 + 1] = mesh->mVertices[index].y;
-        vertices[i*3 + 2] = mesh->mVertices[index].z;
+        // 设置顶点位置
+        vertices[i*3] = mesh->mVertices[index].x;
+        vertices[i*3+1] = mesh->mVertices[index].y;
+        vertices[i*3+2] = mesh->mVertices[index].z;
         
-        // 填充法向量数据
+        // 设置法向量
         if (mesh->mNormals != NULL) {
-            normals[i*3 + 0] = mesh->mNormals[index].x;
-            normals[i*3 + 1] = mesh->mNormals[index].y;
-            normals[i*3 + 2] = mesh->mNormals[index].z;
+            normals[i*3] = mesh->mNormals[index].x;
+            normals[i*3+1] = mesh->mNormals[index].y;
+            normals[i*3+2] = mesh->mNormals[index].z;
         } else {
             // 如果没有法向量，计算面法向量
             if (i == 0) {
@@ -866,26 +939,29 @@ void ModelManager::processFaceWithShader(const struct aiMesh* mesh, const struct
                 aiVector3D normal = edge1 ^ edge2;
                 normalizeVector(normal);
                 
+                // 对所有三个顶点使用相同的面法向量
                 for (int j = 0; j < 3; j++) {
-                    normals[j*3 + 0] = normal.x;
-                    normals[j*3 + 1] = normal.y;
-                    normals[j*3 + 2] = normal.z;
+                    normals[j*3] = normal.x;
+                    normals[j*3+1] = normal.y;
+                    normals[j*3+2] = normal.z;
                 }
             }
         }
+        
+        if (faceCount <= 3 && i == 0) { // 打印前3个面的第一个顶点
+            cout << "  Vertex " << i << ": (" << vertices[i*3] << ", " << vertices[i*3+1] << ", " << vertices[i*3+2] << ")" << endl;
+            cout << "  Normal " << i << ": (" << normals[i*3] << ", " << normals[i*3+1] << ", " << normals[i*3+2] << ")" << endl;
+        }
     }
     
-    // 绑定顶点属性
-    glEnableVertexAttribArray(posAttr);
+    // 绑定顶点数据到着色器属性
     glVertexAttribPointer(posAttr, 3, GL_FLOAT, GL_FALSE, 0, vertices);
-    
-    glEnableVertexAttribArray(norAttr);
     glVertexAttribPointer(norAttr, 3, GL_FLOAT, GL_FALSE, 0, normals);
     
     // 绘制三角形
     glDrawArrays(GL_TRIANGLES, 0, 3);
     
-    // 禁用顶点属性
+    // 禁用顶点属性数组
     glDisableVertexAttribArray(posAttr);
     glDisableVertexAttribArray(norAttr);
 }
