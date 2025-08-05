@@ -2,7 +2,8 @@
 #define MYQOPENGLWIDGET_H
 
 // Use Qt's OpenGL support instead of GLEW
-#include <gl/freeglut.h>
+// 暂时注释掉外部库依赖
+// #include <gl/freeglut.h>
 
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLFunctions>
@@ -137,6 +138,10 @@ private:
     bool m_meshVisible;
     bool m_pointCloudVisible;
     ModelManager* m_modelManager;
+
+    // 着色器初始化状态
+    bool m_shaderInitialized;
+    bool m_meshShaderInitialized;
 
     QVector3D m_lineMove;
     QQuaternion m_rotate;

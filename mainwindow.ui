@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>墙体提取演示系统</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QWidget" name="verticalLayoutWidget">
@@ -43,7 +43,7 @@
     </property>
     <widget class="QWidget" name="tab_unified">
      <attribute name="title">
-      <string>3D Display</string>
+      <string>3D显示</string>
      </attribute>
      <widget class="QWidget" name="displayControlWidget">
       <property name="geometry">
@@ -157,7 +157,7 @@
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>文件</string>
     </property>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
@@ -169,17 +169,17 @@
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
-     <string>Edit</string>
+     <string>编辑</string>
     </property>
    </widget>
    <widget class="QMenu" name="menuVive">
     <property name="title">
-     <string>View</string>
+     <string>视图</string>
     </property>
    </widget>
    <widget class="QMenu" name="menuAnalyze">
     <property name="title">
-     <string>Analyze</string>
+     <string>分析</string>
     </property>
     <widget class="QMenu" name="menuTexture">
      <property name="title">
@@ -254,27 +254,27 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionNew">
    <property name="text">
-    <string>New Project</string>
+    <string>新建项目</string>
    </property>
   </action>
   <action name="actionOpen">
    <property name="text">
-    <string>Open Project</string>
+    <string>打开项目</string>
    </property>
   </action>
   <action name="actionAdd">
    <property name="text">
-    <string>Add  File</string>
+    <string>添加文件</string>
    </property>
   </action>
   <action name="actionOpen_PLY">
    <property name="text">
-    <string>Open PLY</string>
+    <string>打开PLY文件</string>
    </property>
   </action>
   <action name="actionVectorization_2">
    <property name="text">
-    <string>Vectorization</string>
+    <string>矢量化</string>
    </property>
   </action>
   <action name="actionTextureOn">

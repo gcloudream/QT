@@ -72,6 +72,8 @@ MyQOpenglWidget::MyQOpenglWidget(QWidget *parent)
     ,m_scale(1.0f)
     ,m_modelManager(nullptr)
     ,m_bShowAxis(false)
+    ,m_shaderInitialized(false)
+    ,m_meshShaderInitialized(false)
 {
     m_Timer = new QTimer;
     // m_context.reset(new QOpenGLContext());
@@ -184,16 +186,28 @@ void MyQOpenglWidget::keyPressEvent(QKeyEvent *e)
 
 void MyQOpenglWidget::initializeGL()
 {
+    qDebug() << "=== MyQOpenglWidget::initializeGL() called ===";
+
     makeCurrent();
+
+    // 初始化OpenGL函数
+    initializeOpenGLFunctions();
+
+    // 检查OpenGL版本
+    qDebug() << "OpenGL Version:" << (const char*)glGetString(GL_VERSION);
+    qDebug() << "OpenGL Vendor:" << (const char*)glGetString(GL_VENDOR);
+    qDebug() << "OpenGL Renderer:" << (const char*)glGetString(GL_RENDERER);
+
     bool binit = true;
     binit &= InitShader();
     binit &= InitMeshShader();
-    if (!binit)
-    {
+
+    if (!binit) {
+        qDebug() << "ERROR: Shader initialization failed! Aborting OpenGL initialization.";
         return;
     }
-    //OpenGLCore = new QOpenGLFunctions_4_3_Core();
-    initializeOpenGLFunctions();
+
+    qDebug() << "SUCCESS: All shaders initialized successfully";
     glEnable(GL_DEPTH_TEST);
 
     m_VAO->create();
@@ -475,28 +489,69 @@ void MyQOpenglWidget::debugMsg(QString msg, QTime start)
 
 void MyQOpenglWidget::resizeGL(int w, int h)
 {
+    qDebug() << "=== MyQOpenglWidget::resizeGL ===";
+    qDebug() << "New size:" << w << "x" << h;
+    qDebug() << "Widget geometry:" << geometry();
+    qDebug() << "Parent size:" << (parentWidget() ? parentWidget()->size() : QSize(-1, -1));
+
     const qreal retinaScale = devicePixelRatio();
+    qDebug() << "Retina scale:" << retinaScale;
+    qDebug() << "Viewport size:" << (w * retinaScale) << "x" << (h * retinaScale);
+
     glViewport(0, 0, w * retinaScale, h * retinaScale);
-    repaint();
+
+    // 确保视图矩阵正确更新
+    update();
+
+    qDebug() << "=== OpenGL resize completed ===";
 }
 
 
 bool MyQOpenglWidget::InitShader()
 {
+    qDebug() << "=== Initializing Point Cloud Shader ===";
+
+    // 检查是否已经初始化
+    if (m_shaderInitialized) {
+        qDebug() << "Point cloud shader already initialized";
+        return true;
+    }
+
+    // 重新创建着色器程序以避免重复添加
+    m_Program.reset(new QOpenGLShaderProgram(this));
+
     bool success = true;
     success &= m_Program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource);
     success &= m_Program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShaderSource);
     success &= m_Program->link();
-    GetShaderUniformPara();
+
+    if (success) {
+        qDebug() << "SUCCESS: Point cloud shader linked";
+        GetShaderUniformPara();
+        m_shaderInitialized = true;
+    } else {
+        qDebug() << "ERROR: Point cloud shader failed to link";
+        qDebug() << "Link log:" << m_Program->log();
+    }
+
     return success;
 }
 
 bool MyQOpenglWidget::InitMeshShader()
 {
     qDebug() << "=== Initializing Mesh Shader ===";
-    
+
+    // 检查是否已经初始化
+    if (m_meshShaderInitialized) {
+        qDebug() << "Mesh shader already initialized";
+        return true;
+    }
+
+    // 重新创建着色器程序以避免重复添加
+    m_MeshProgram.reset(new QOpenGLShaderProgram(this));
+
     bool success = true;
-    
+
     // 编译顶点着色器
     if (!m_MeshProgram->addShaderFromSourceCode(QOpenGLShader::Vertex, meshVertexShaderSource)) {
         qDebug() << "ERROR: Failed to compile vertex shader!";
@@ -505,7 +560,7 @@ bool MyQOpenglWidget::InitMeshShader()
     } else {
         qDebug() << "SUCCESS: Vertex shader compiled";
     }
-    
+
     // 编译片段着色器
     if (!m_MeshProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, meshFragmentShaderSource)) {
         qDebug() << "ERROR: Failed to compile fragment shader!";
@@ -514,7 +569,7 @@ bool MyQOpenglWidget::InitMeshShader()
     } else {
         qDebug() << "SUCCESS: Fragment shader compiled";
     }
-    
+
     // 链接着色器程序
     if (!m_MeshProgram->link()) {
         qDebug() << "ERROR: Failed to link shader program!";
@@ -526,7 +581,7 @@ bool MyQOpenglWidget::InitMeshShader()
     
     if (success) {
         GetMeshShaderUniformPara();
-        
+
         // 验证属性位置
         qDebug() << "Shader attribute locations:";
         qDebug() << "  position:" << m_meshPosAttr;
@@ -537,14 +592,16 @@ bool MyQOpenglWidget::InitMeshShader()
         qDebug() << "  light_position:" << m_meshLightPosUniform;
         qDebug() << "  light_color:" << m_meshLightColorUniform;
         qDebug() << "  ambient_strength:" << m_meshAmbientUniform;
-        
+
         // 检查是否有无效的位置
         if (m_meshPosAttr == -1 || m_meshNorAttr == -1) {
             qDebug() << "ERROR: Invalid attribute locations!";
             success = false;
+        } else {
+            m_meshShaderInitialized = true;
         }
     }
-    
+
     qDebug() << "=== Mesh Shader Init Result:" << (success ? "SUCCESS" : "FAILED") << "===";
     return success;
 }
@@ -871,11 +928,24 @@ void MyQOpenglWidget::renderAxis()
 void MyQOpenglWidget::renderMesh()
 {
     qDebug() << "=== Starting Mesh Rendering ===";
-    
+
+    // 检查必要的组件
     if (!m_modelManager || !m_MeshProgram) {
         qDebug() << "ERROR: ModelManager or MeshProgram not available";
         qDebug() << "  ModelManager:" << (m_modelManager ? "OK" : "NULL");
         qDebug() << "  MeshProgram:" << (m_MeshProgram ? "OK" : "NULL");
+        return;
+    }
+
+    // 检查着色器是否正确初始化
+    if (!m_meshShaderInitialized) {
+        qDebug() << "ERROR: Mesh shader not properly initialized";
+        return;
+    }
+
+    // 检查着色器程序是否链接成功
+    if (!m_MeshProgram->isLinked()) {
+        qDebug() << "ERROR: Mesh shader program is not linked";
         return;
     }
     

@@ -6,12 +6,13 @@
 #include <QtGui/qopengl.h>
 #include <QOpenGLFunctions>
 
-#include <IL/il.h>
+// 暂时注释掉外部库依赖
+// #include <IL/il.h>
 #include <QFile>
 
-#include <assimp/cimport.h>
-#include <assimp/postprocess.h>
-#include <assimp/scene.h>
+// #include <assimp/cimport.h>
+// #include <assimp/postprocess.h>
+// #include <assimp/scene.h>
 
 #include <string.h>
 #include <map>
@@ -42,10 +43,15 @@ public:
     ShadingMode shadingMode;       //当前shading模式
     TransformMode transformMode;   //当前变换模式
     int subdivisionDepth;          //细分深度，0位不细分
-    void renderLineFace(const struct aiMesh* mesh, const struct aiFace* face);
-    void renderPointFace(const struct aiMesh* mesh, const struct aiFace* face);
+    // 暂时注释掉使用外部库的函数
+    // void renderLineFace(const struct aiMesh* mesh, const struct aiFace* face);
+    // void renderPointFace(const struct aiMesh* mesh, const struct aiFace* face);
 
-    aiVector3D scene_min, scene_max, scene_center;
+    // aiVector3D scene_min, scene_max, scene_center;
+
+    // 临时替代变量
+    struct SimpleVector3D { float x, y, z; };
+    SimpleVector3D scene_min, scene_max, scene_center;
     
     // 获取模型包围盒信息的公共接口
     QVector3D getSceneMin() const { return QVector3D(scene_min.x, scene_min.y, scene_min.z); }
@@ -58,41 +64,44 @@ private:
 
     //获取包围盒，得到x/y/z的最大/最小值：用于将模型放置在正中央
     void getBoundingBox();
-    void getBoundingBoxRecursive(const struct aiNode* nd, aiMatrix4x4* trafo);
+    // 暂时注释掉使用外部库的函数
+    // void getBoundingBoxRecursive(const struct aiNode* nd, aiMatrix4x4* trafo);
 
     //递归渲染
-    void recursiveRender(const struct aiScene *sc, const struct aiNode* nd);
-    void recursiveRenderWithShader(const struct aiScene *sc, const struct aiNode* nd, GLuint posAttr, GLuint norAttr);
-    void applyMaterial(const aiMaterial *mtl);    //给模型添加texture
+    // void recursiveRender(const struct aiScene *sc, const struct aiNode* nd);
+    // void recursiveRenderWithShader(const struct aiScene *sc, const struct aiNode* nd, GLuint posAttr, GLuint norAttr);
+    // void applyMaterial(const aiMaterial *mtl);    //给模型添加texture
 
-    //处理面的函数入口
-    void processFace(const struct aiMesh* mesh, GLenum face_mode, const struct aiFace* face);
-    void processFaceWithShader(const struct aiMesh* mesh, const struct aiFace* face, GLuint posAttr, GLuint norAttr);
-    void subdivision(aiVector3D vPos1, aiVector3D vPos2, aiVector3D vPos3,
-                     aiVector3D vNor1, aiVector3D vNor2, aiVector3D vNor3,
-                     aiVector3D vTexPos1, aiVector3D vTexPos2, aiVector3D vTexPos3,
-                     int depth);
+    //处理面的函数入口 - 暂时注释掉
+    // void processFace(const struct aiMesh* mesh, GLenum face_mode, const struct aiFace* face);
+    // void processFaceWithShader(const struct aiMesh* mesh, const struct aiFace* face, GLuint posAttr, GLuint norAttr);
+    // void subdivision(aiVector3D vPos1, aiVector3D vPos2, aiVector3D vPos3,
+    //                  aiVector3D vNor1, aiVector3D vNor2, aiVector3D vNor3,
+    //                  aiVector3D vTexPos1, aiVector3D vTexPos2, aiVector3D vTexPos3,
+    //                  int depth);
 
-    //四边形渲染模式
-    void renderPolygonFaceFlat(const struct aiMesh* mesh, GLenum face_mode, const struct aiFace* face);
-    void renderPolygonFaceWireframe(const struct aiMesh* mesh, const struct aiFace* face);
+    //四边形渲染模式 - 暂时注释掉
+    // void renderPolygonFaceFlat(const struct aiMesh* mesh, GLenum face_mode, const struct aiFace* face);
+    // void renderPolygonFaceWireframe(const struct aiMesh* mesh, const struct aiFace* face);
 
-    //三角形渲染模式
-    void renderTriangleFaceFlat(aiVector3D vPos1, aiVector3D vPos2, aiVector3D vPos3,
-                                aiVector3D vNor1, aiVector3D vNor2, aiVector3D vNor3,
-                                aiVector3D vTexPos1, aiVector3D vTexPos2, aiVector3D vTexPos3);
-    void renderTriangleFaceWireframe(aiVector3D vPos1, aiVector3D vPos2, aiVector3D vPos3);
-    //三角形渲染phong模式
-    void renderFaceFlatPhong(aiVector3D vPos1, aiVector3D vPos2, aiVector3D vPos3,
-                             aiVector3D vNor1, aiVector3D vNor2, aiVector3D vNor3,
-                             aiVector3D vTexPos1, aiVector3D vTexPos2, aiVector3D vTexPos3);
-    void renderSubFaceFlatPhong(aiVector3D vPos1, aiVector3D vPos2, aiVector3D vPos3,
-                                aiVector3D vNor1, aiVector3D vNor2, aiVector3D vNor3,
-                                aiVector3D vTexPos1, aiVector3D vTexPos2, aiVector3D vTexPos3);
+    //三角形渲染模式 - 暂时注释掉
+    // void renderTriangleFaceFlat(aiVector3D vPos1, aiVector3D vPos2, aiVector3D vPos3,
+    //                             aiVector3D vNor1, aiVector3D vNor2, aiVector3D vNor3,
+    //                             aiVector3D vTexPos1, aiVector3D vTexPos2, aiVector3D vTexPos3);
+    // 暂时注释掉使用外部库的函数
+    // void renderTriangleFaceWireframe(aiVector3D vPos1, aiVector3D vPos2, aiVector3D vPos3);
+    // //三角形渲染phong模式
+    // void renderFaceFlatPhong(aiVector3D vPos1, aiVector3D vPos2, aiVector3D vPos3,
+    //                          aiVector3D vNor1, aiVector3D vNor2, aiVector3D vNor3,
+    //                          aiVector3D vTexPos1, aiVector3D vTexPos2, aiVector3D vTexPos3);
+    // void renderSubFaceFlatPhong(aiVector3D vPos1, aiVector3D vPos2, aiVector3D vPos3,
+    //                             aiVector3D vNor1, aiVector3D vNor2, aiVector3D vNor3,
+    //                             aiVector3D vTexPos1, aiVector3D vTexPos2, aiVector3D vTexPos3);
 
 private:
     string modelPath = "";
-    const aiScene* scene = NULL;
+    // const aiScene* scene = NULL;  // 暂时注释掉
+    void* scene = nullptr;  // 临时替代
     GLuint scene_list = 0;
 
     map<string, GLuint*> textureIdMap;        // map image filenames to textureIds

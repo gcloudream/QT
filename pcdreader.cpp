@@ -1,5 +1,6 @@
 #include "PCDReader.h"
-#include <lz4.h>  // 需要添加LZ4库
+// 暂时注释掉外部库依赖
+// #include <lz4.h>  // 需要添加LZ4库
 
 //test 这个类没有使用，建议保留，防止读取其他格式pcd文件报错
 

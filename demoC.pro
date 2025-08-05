@@ -21,7 +21,21 @@ SOURCES += \
     modelmanager.cpp \
     myqopenglwidget.cpp \
     openglwindow.cpp \
-    pcdreader.cpp
+    pcdreader.cpp \
+    src/wall_extraction/wall_extraction_manager.cpp \
+    src/wall_extraction/line_drawing_tool.cpp \
+    src/wall_extraction/wall_fitting_algorithm.cpp \
+    src/wall_extraction/wireframe_generator.cpp \
+    src/wall_extraction/las_reader.cpp \
+    src/wall_extraction/point_cloud_processor.cpp \
+    src/wall_extraction/point_cloud_lod_manager.cpp \
+    src/wall_extraction/spatial_index.cpp \
+    src/wall_extraction/point_cloud_memory_manager.cpp \
+    src/wall_extraction/top_down_view_renderer.cpp \
+    src/wall_extraction/color_mapping_manager.cpp \
+    src/wall_extraction/view_projection_manager.cpp \
+    src/wall_extraction/top_down_interaction_controller.cpp \
+    src/wall_extraction/stage1_demo_widget.cpp
 
 HEADERS += \
     config.h \
@@ -31,7 +45,21 @@ HEADERS += \
     modelmanager.h \
     myqopenglwidget.h \
     openglwindow.h \
-    pcdreader.h
+    pcdreader.h \
+    src/wall_extraction/wall_extraction_manager.h \
+    src/wall_extraction/line_drawing_tool.h \
+    src/wall_extraction/wall_fitting_algorithm.h \
+    src/wall_extraction/wireframe_generator.h \
+    src/wall_extraction/las_reader.h \
+    src/wall_extraction/point_cloud_processor.h \
+    src/wall_extraction/point_cloud_lod_manager.h \
+    src/wall_extraction/spatial_index.h \
+    src/wall_extraction/point_cloud_memory_manager.h \
+    src/wall_extraction/top_down_view_renderer.h \
+    src/wall_extraction/color_mapping_manager.h \
+    src/wall_extraction/view_projection_manager.h \
+    src/wall_extraction/top_down_interaction_controller.h \
+    src/wall_extraction/stage1_demo_widget.h
 
 FORMS += \
     mainwindow.ui
@@ -54,20 +82,21 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 # # 设置库文件路径，指向 FreeGLUT 的库文件所在目录
 # LIBS += -LD:/vcpkg/vcpkg/installed/x64-windows/lib
 
-# 设置 Assimp 头文件路径
-INCLUDEPATH += C:/Users/18438/vcpkg/installed/x64-windows/include
+# 暂时注释掉外部依赖以避免链接问题
+# # 设置 Assimp 头文件路径
+# INCLUDEPATH += C:/Users/18438/vcpkg/installed/x64-windows/include
 
-# 设置 Assimp 库文件路径
-LIBS += -LC:/Users/18438/vcpkg/installed/x64-windows/lib
+# # 设置 Assimp 库文件路径
+# LIBS += -LC:/Users/18438/vcpkg/installed/x64-windows/lib
 
-# 设置 include 路径，指向 FreeGLUT 的头文件所在目录
-INCLUDEPATH += C:/Users/18438/vcpkg/installed/x64-windows/include
+# # 设置 include 路径，指向 FreeGLUT 的头文件所在目录
+# INCLUDEPATH += C:/Users/18438/vcpkg/installed/x64-windows/include
 
-# 设置库文件路径，指向 FreeGLUT 的库文件所在目录
-LIBS += -LC:/Users/18438/vcpkg/installed/x64-windows/lib
+# # 设置库文件路径，指向 FreeGLUT 的库文件所在目录
+# LIBS += -LC:/Users/18438/vcpkg/installed/x64-windows/lib
 
-# 链接 Assimp 库
-LIBS += -lassimp-vc143-mt
+# # 链接 Assimp 库
+# LIBS += -lassimp-vc143-mt
 
 
 
@@ -77,19 +106,16 @@ LIBS += -lassimp-vc143-mt
 # RESOURCES += \
 #     resources.qrc
 
-# 链接 OpenGL 和 FreeGLUT 库
-LIBS += -lopengl32  # Windows 上的 OpenGL 库
-LIBS += -lfreeglut  # FreeGLUT 库
-
-# 设置 DevIL 头文件路径
-INCLUDEPATH += $$VCPKG_PATH/include/IL
-
-# # 设置 DevIL 库文件路径
-# LIBS += -L$$VCPKG_PATH/lib
-
-# 链接 DevIL 库
-LIBS += -lDevIL
-
-LIBS += -lILU  # 同时链接IL和ILU
-
+# 只保留基本的OpenGL库
 LIBS += -lopengl32 -lglu32
+
+# 暂时注释掉其他外部依赖
+# # 链接 OpenGL 和 FreeGLUT 库
+# LIBS += -lfreeglut  # FreeGLUT 库
+
+# # 设置 DevIL 头文件路径
+# INCLUDEPATH += $$VCPKG_PATH/include/IL
+
+# # 链接 DevIL 库
+# LIBS += -lDevIL
+# LIBS += -lILU  # 同时链接IL和ILU

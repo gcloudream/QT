@@ -2,7 +2,8 @@
 #define OPENGLWINDOW_H
 
 // Use Qt's OpenGL support instead of GLEW
-#include <gl/freeglut.h>
+// 暂时注释掉外部库依赖
+// #include <gl/freeglut.h>
 
 #include <QtOpenGLWidgets/QOpenGLWidget>
 #include <QKeyEvent>

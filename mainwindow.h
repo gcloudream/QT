@@ -8,9 +8,17 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QResizeEvent>
+#include <QShowEvent>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QTimer>
+#include <QEvent>
 #include "myqopenglwidget.h"
 #include "pcdreader.h"
 #include "config.h"
+#include "src/wall_extraction/wall_extraction_manager.h"
+#include "src/wall_extraction/stage1_demo_widget.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -85,8 +93,17 @@ private slots:
     void showLineView();
     void showOriginalView();
 
+    // 墙面提取功能槽函数
+    void activateWallExtraction();
+    void deactivateWallExtraction();
+    void onWallExtractionModeChanged(WallExtraction::InteractionMode mode);
+    void onWallExtractionStatusChanged(const QString& message);
+    void onWallExtractionError(const QString& error);
 
-
+protected:
+    void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
     Ui::MainWindow *ui;
@@ -123,6 +140,12 @@ private:
 
     std::vector<QVector3D> m_currentCloud; // 新增当前点云存储
 
+    // 墙面提取模块
+    std::unique_ptr<WallExtraction::WallExtractionManager> m_wallExtractionManager;
+
+    // 阶段一演示Widget
+    Stage1DemoWidget* m_stage1DemoWidget;
+
     // 已移除OpenglWindow，统一使用MyQOpenglWidget
 
     void setupStackedWidget();
@@ -130,6 +153,15 @@ private:
     void updateMenusForLineView();
     void updateMenusForOriginalView();
     void setupLineViewMenus();
+
+    // 墙面提取模块初始化
+    void initializeWallExtractionModule();
+
+    // 响应式布局设置
+    void setupResponsiveLayout();
+    void forceLayoutRebuild();
+    void setup3DDisplayResponsiveLayout();
+    void setupDisplayControlLayout(QWidget* controlWidget);
 
 
 };

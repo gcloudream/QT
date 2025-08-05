@@ -1,5 +1,10 @@
 #include "openglwindow.h"
 #include <filesystem> // 必须包含此头文件
+#include <cmath>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 #define SCALE_FACTOR 0.1f
 #define ROTATE_FACTOR 2.0f
@@ -133,11 +138,15 @@ void OpenglWindow::paintGL() {
     float cameraDistance = maxDimension * 3.0f;
 
     // 相机位置：从斜上方观察，确保能看到模型
-    gluLookAt(cameraDistance, cameraDistance * 0.5f, cameraDistance,
-              modelManager->scene_center.x,
-              modelManager->scene_center.y,
-              modelManager->scene_center.z,
-              0, 1.0f, 0);
+    // 暂时注释掉gluLookAt，使用默认视图
+    // gluLookAt(cameraDistance, cameraDistance * 0.5f, cameraDistance,
+    //           modelManager->scene_center.x,
+    //           modelManager->scene_center.y,
+    //           modelManager->scene_center.z,
+    //           0, 1.0f, 0);
+
+    // 使用简单的平移替代
+    glTranslatef(0.0f, 0.0f, -cameraDistance);
 
     //放缩
     glScalef(size, size, size);
@@ -356,7 +365,15 @@ void OpenglWindow::resizeGL(int width, int height) {
     float nearPlane = 0.1f;
     float farPlane = 1000.0f;
 
-    gluPerspective(fov, aspect, nearPlane, farPlane);
+    // 暂时注释掉gluPerspective，使用简单的透视投影
+    // gluPerspective(fov, aspect, nearPlane, farPlane);
+
+    // 使用glFrustum替代
+    float top = nearPlane * tan(fov * M_PI / 360.0);
+    float bottom = -top;
+    float right = top * aspect;
+    float left = -right;
+    glFrustum(left, right, bottom, top, nearPlane, farPlane);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
