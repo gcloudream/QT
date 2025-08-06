@@ -140,23 +140,38 @@ std::vector<ProjectionResult> ViewProjectionManager::projectToTopDown(const std:
 ProjectionResult ViewProjectionManager::projectPoint(const QVector3D& worldPoint) const
 {
     ProjectionResult result;
-    
-    // 应用组合变换矩阵
-    QVector4D homogeneousPoint(worldPoint, 1.0f);
-    QVector4D transformedPoint = m_matrices.combined * homogeneousPoint;
-    
-    // 透视除法
-    if (transformedPoint.w() != 0.0f) {
-        transformedPoint /= transformedPoint.w();
+
+    // 确保投影矩阵是最新的
+    if (!m_matricesValid) {
+        const_cast<ViewProjectionManager*>(this)->updateProjectionMatrices();
     }
-    
+
+    // 分步应用变换以便调试
+    QVector4D homogeneousPoint(worldPoint, 1.0f);
+
+    // 1. 视图变换
+    QVector4D viewPoint = m_matrices.view * homogeneousPoint;
+
+    // 2. 投影变换
+    QVector4D projectedPoint = m_matrices.projection * viewPoint;
+
+    // 3. 透视除法
+    if (projectedPoint.w() != 0.0f && qAbs(projectedPoint.w()) > 0.0001f) {
+        projectedPoint /= projectedPoint.w();
+    }
+
+    // 4. 视口变换
+    QVector4D screenPoint = m_matrices.viewport * QVector4D(projectedPoint.x(), projectedPoint.y(), projectedPoint.z(), 1.0f);
+
     // 转换为屏幕坐标
-    result.screenPosition = QVector2D(transformedPoint.x(), transformedPoint.y());
-    result.depth = transformedPoint.z();
-    
+    result.screenPosition = QVector2D(screenPoint.x(), screenPoint.y());
+    result.depth = projectedPoint.z();
+
     // 检查可见性
-    result.isVisible = isPointVisible(worldPoint);
-    
+    result.isVisible = isPointVisible(worldPoint) &&
+                      result.screenPosition.x() >= 0 && result.screenPosition.x() < m_viewportSize.width() &&
+                      result.screenPosition.y() >= 0 && result.screenPosition.y() < m_viewportSize.height();
+
     return result;
 }
 
@@ -378,9 +393,10 @@ QMatrix4x4 ViewProjectionManager::createViewportMatrix() const
     float width = m_viewportSize.width();
     float height = m_viewportSize.height();
 
-    // 视口变换矩阵
+    // 改进的视口变换矩阵
+    // 将NDC坐标 [-1,1] 映射到屏幕坐标 [0, width] 和 [0, height]
+    matrix.translate(width * 0.5f, height * 0.5f, 0.0f);
     matrix.scale(width * 0.5f, -height * 0.5f, 1.0f);
-    matrix.translate(1.0f, -1.0f, 0.0f);
 
     return matrix;
 }

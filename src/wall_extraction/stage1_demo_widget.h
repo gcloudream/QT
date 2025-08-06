@@ -126,6 +126,24 @@ private:
     void updateColorMapping();
     void updateLODDisplay();
 
+    // 俯视图渲染优化方法
+    QSize calculateOptimalRenderSize() const;
+    QRectF calculatePointCloudBounds() const;
+    void optimizeColorMappingForTopDown();
+
+    // 点云数据分析方法
+    void analyzePointCloudData();
+    void validatePointCloudAttributes();
+    void debugRenderingPipeline();
+
+    // 大数据量处理方法
+    std::vector<WallExtraction::PointWithAttributes> performIntelligentSampling(
+        const std::vector<WallExtraction::PointWithAttributes>& points,
+        size_t targetCount) const;
+
+    // 测试数据生成方法
+    void generateValidTestData(int pointCount);
+
 private:
     // 主布局
     QVBoxLayout* m_mainLayout;

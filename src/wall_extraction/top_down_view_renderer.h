@@ -290,6 +290,13 @@ private:
     std::vector<ColoredPoint> applyCulling(const std::vector<ColoredPoint>& coloredPoints);
 
     /**
+     * @brief 应用宽松的视锥体剔除（用于恢复渲染）
+     * @param coloredPoints 带颜色的点数据
+     * @return 剔除后的点数据
+     */
+    std::vector<ColoredPoint> applyLenientCulling(const std::vector<ColoredPoint>& coloredPoints);
+
+    /**
      * @brief 绘制单个点
      * @param point 点数据
      */

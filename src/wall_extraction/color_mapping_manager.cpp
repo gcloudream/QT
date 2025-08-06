@@ -205,32 +205,44 @@ std::vector<ColoredPoint> ColorMappingManager::applyColorMapping(const std::vect
 {
     std::vector<ColoredPoint> coloredPoints;
     coloredPoints.reserve(points.size());
-    
+
+    qDebug() << "=== ColorMappingManager::applyColorMapping (QVector3D) ===";
+    qDebug() << "Input points:" << points.size();
+    qDebug() << "Current scheme:" << static_cast<int>(m_currentScheme);
+    qDebug() << "Value range:" << m_minValue << "to" << m_maxValue;
+
     for (size_t i = 0; i < points.size(); ++i) {
         const auto& point = points[i];
         float value = 0.0f;
-        
+
         // 对于仅坐标的点，只能使用高度映射
         if (m_currentScheme == ColorScheme::Height) {
             value = point.z();
         } else {
-            // 其他方案使用默认颜色
-            value = m_minValue;
+            // 其他方案使用高度作为默认值，而不是最小值
+            value = point.z();
+            qDebug() << "Using height for non-height scheme, point" << i << "z=" << value;
         }
-        
+
         QColor color = getColorForValue(value);
-        
+
         // 应用透明度
         if (m_alpha < 1.0f) {
             color.setAlphaF(m_alpha);
         }
-        
+
         ColoredPoint coloredPoint;
         coloredPoint.color = color;
         coloredPoint.originalIndex = i;
         coloredPoints.push_back(coloredPoint);
+
+        // 调试前几个点的颜色映射
+        if (i < 5) {
+            qDebug() << "Point" << i << "- Position:" << point << "Value:" << value << "Color:" << color;
+        }
     }
-    
+
+    qDebug() << "Color mapping completed, generated" << coloredPoints.size() << "colored points";
     return coloredPoints;
 }
 

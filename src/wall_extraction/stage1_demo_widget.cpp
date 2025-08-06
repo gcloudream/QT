@@ -6,11 +6,14 @@
 #include "point_cloud_memory_manager.h"
 #include "spatial_index.h"
 #include "las_reader.h"
+#include "point_cloud_processor.h"
+#include "../../pcdreader.h"
 #include <QDebug>
 #include <QMessageBox>
 #include <QApplication>
 #include <QPixmap>
 #include <QtMath>
+#include <cmath>
 
 Stage1DemoWidget::Stage1DemoWidget(QWidget *parent)
     : QWidget(parent)
@@ -1738,8 +1741,10 @@ void Stage1DemoWidget::loadPointCloudFile()
 
         // 根据文件扩展名选择合适的读取器
         QString ext = QFileInfo(fileName).suffix().toLower();
+        qDebug() << "Loading file with extension:" << ext;
 
         if (ext == "las" || ext == "laz") {
+            // LAS/LAZ文件处理
             WallExtraction::LASReader reader;
             if (reader.canReadFile(fileName)) {
                 m_currentPointCloud = reader.readPointCloudWithAttributes(fileName);
@@ -1747,12 +1752,189 @@ void Stage1DemoWidget::loadPointCloudFile()
                 for (const auto& point : m_currentPointCloud) {
                     m_currentSimpleCloud.push_back(point.position);
                 }
+                qDebug() << "Successfully loaded LAS/LAZ file with" << m_currentPointCloud.size() << "points";
             } else {
                 throw std::runtime_error("Failed to read LAS/LAZ file");
             }
+        } else if (ext == "pcd") {
+            // PCD文件处理
+            qDebug() << "Loading PCD file:" << fileName;
+            std::vector<QVector3D> simplePoints = PCDReader::ReadVec3PointCloudPCD(fileName);
+            if (simplePoints.empty()) {
+                throw std::runtime_error("Failed to read PCD file or file is empty");
+            }
+
+            // 转换为带属性的点云格式，并进行数据验证
+            m_currentPointCloud.clear();
+            m_currentSimpleCloud.clear();
+            m_currentPointCloud.reserve(simplePoints.size());
+            m_currentSimpleCloud.reserve(simplePoints.size());
+
+            qDebug() << "=== Data Validation and Cleaning ===";
+            int validPoints = 0;
+            int invalidPoints = 0;
+
+            for (size_t i = 0; i < simplePoints.size(); ++i) {
+                const QVector3D& pos = simplePoints[i];
+
+                // 数据有效性检查
+                bool isValid = true;
+
+                // 检查是否为无穷大或NaN
+                if (!std::isfinite(pos.x()) || !std::isfinite(pos.y()) || !std::isfinite(pos.z())) {
+                    isValid = false;
+                }
+
+                // 检查是否在合理范围内（假设点云在±1000米范围内）
+                const float MAX_COORD = 1000.0f;
+                if (qAbs(pos.x()) > MAX_COORD || qAbs(pos.y()) > MAX_COORD || qAbs(pos.z()) > MAX_COORD) {
+                    isValid = false;
+                }
+
+                if (isValid) {
+                    WallExtraction::PointWithAttributes point;
+                    point.position = pos;
+
+                    // 为PCD点云生成基本属性
+                    point.attributes["intensity"] = static_cast<int>(point.position.z() * 1000);
+                    point.attributes["classification"] = (point.position.z() > 0) ? 6 : 2;
+                    point.attributes["red"] = static_cast<int>((point.position.z() / 10.0f) * 65535);
+                    point.attributes["green"] = 65535 - point.attributes["red"].toInt();
+                    point.attributes["blue"] = (point.attributes["red"].toInt() + 32767) % 65535;
+
+                    m_currentPointCloud.push_back(point);
+                    m_currentSimpleCloud.push_back(pos);
+                    validPoints++;
+                } else {
+                    invalidPoints++;
+                    if (invalidPoints <= 5) {
+                        qDebug() << "Invalid point" << i << ":" << pos;
+                    }
+                }
+            }
+
+            qDebug() << "Data validation completed:";
+            qDebug() << "  Valid points:" << validPoints;
+            qDebug() << "  Invalid points:" << invalidPoints;
+            qDebug() << "  Validation rate:" << (validPoints * 100.0 / simplePoints.size()) << "%";
+
+            if (validPoints == 0) {
+                qDebug() << "WARNING: No valid points found in PCD file - generating test data instead";
+                QMessageBox::warning(this, "数据损坏",
+                    QString("PCD文件数据损坏（包含无效坐标）\n"
+                           "将生成测试数据进行演示\n\n"
+                           "原始文件：%1\n"
+                           "无效点数：%2")
+                    .arg(fileName)
+                    .arg(invalidPoints));
+
+                generateValidTestData(50000); // 生成5万个测试点
+            } else {
+                qDebug() << "Successfully loaded PCD file with" << m_currentPointCloud.size() << "valid points";
+            }
+        } else if (ext == "ply") {
+            // PLY文件处理
+            qDebug() << "Loading PLY file:" << fileName;
+
+            // 使用PointCloudProcessor读取PLY文件
+            WallExtraction::PointCloudProcessor processor;
+            if (!processor.canReadFile(fileName)) {
+                throw std::runtime_error("Cannot read PLY file");
+            }
+
+            std::vector<QVector3D> simplePoints = processor.readPointCloud(fileName);
+            if (simplePoints.empty()) {
+                throw std::runtime_error("Failed to read PLY file or file is empty");
+            }
+
+            // 转换为带属性的点云格式，并进行数据验证
+            m_currentPointCloud.clear();
+            m_currentSimpleCloud.clear();
+            m_currentPointCloud.reserve(simplePoints.size());
+            m_currentSimpleCloud.reserve(simplePoints.size());
+
+            qDebug() << "=== PLY Data Validation and Cleaning ===";
+            int validPoints = 0;
+            int invalidPoints = 0;
+
+            for (size_t i = 0; i < simplePoints.size(); ++i) {
+                const QVector3D& pos = simplePoints[i];
+
+                // 数据有效性检查
+                bool isValid = true;
+
+                // 检查是否为无穷大或NaN
+                if (!std::isfinite(pos.x()) || !std::isfinite(pos.y()) || !std::isfinite(pos.z())) {
+                    isValid = false;
+                }
+
+                // 检查是否在合理范围内
+                const float MAX_COORD = 1000.0f;
+                if (qAbs(pos.x()) > MAX_COORD || qAbs(pos.y()) > MAX_COORD || qAbs(pos.z()) > MAX_COORD) {
+                    isValid = false;
+                }
+
+                if (isValid) {
+                    WallExtraction::PointWithAttributes point;
+                    point.position = pos;
+
+                    // 为PLY点云生成基本属性
+                    point.attributes["intensity"] = static_cast<int>(point.position.z() * 1000);
+                    point.attributes["classification"] = (point.position.z() > 0) ? 6 : 2;
+                    point.attributes["red"] = static_cast<int>((point.position.z() / 10.0f) * 65535);
+                    point.attributes["green"] = 65535 - point.attributes["red"].toInt();
+                    point.attributes["blue"] = (point.attributes["red"].toInt() + 32767) % 65535;
+
+                    m_currentPointCloud.push_back(point);
+                    m_currentSimpleCloud.push_back(pos);
+                    validPoints++;
+                } else {
+                    invalidPoints++;
+                }
+            }
+
+            qDebug() << "PLY validation completed: Valid=" << validPoints << "Invalid=" << invalidPoints;
+
+            if (validPoints == 0) {
+                throw std::runtime_error("No valid points found in PLY file - data may be corrupted");
+            }
+            qDebug() << "Successfully loaded PLY file with" << m_currentPointCloud.size() << "points";
+        } else if (ext == "xyz" || ext == "txt") {
+            // XYZ/TXT文件处理
+            qDebug() << "Loading XYZ/TXT file:" << fileName;
+
+            WallExtraction::PointCloudProcessor processor;
+            if (!processor.canReadFile(fileName)) {
+                throw std::runtime_error("Cannot read XYZ/TXT file");
+            }
+
+            std::vector<QVector3D> simplePoints = processor.readPointCloud(fileName);
+            if (simplePoints.empty()) {
+                throw std::runtime_error("Failed to read XYZ/TXT file or file is empty");
+            }
+
+            // 转换为带属性的点云格式
+            m_currentPointCloud.clear();
+            m_currentSimpleCloud = simplePoints;
+            m_currentPointCloud.reserve(simplePoints.size());
+
+            for (size_t i = 0; i < simplePoints.size(); ++i) {
+                WallExtraction::PointWithAttributes point;
+                point.position = simplePoints[i];
+
+                // 为XYZ/TXT点云生成基本属性
+                point.attributes["intensity"] = static_cast<int>(point.position.z() * 1000);
+                point.attributes["classification"] = (point.position.z() > 0) ? 6 : 2;
+                point.attributes["red"] = static_cast<int>((point.position.z() / 10.0f) * 65535);
+                point.attributes["green"] = 65535 - point.attributes["red"].toInt();
+                point.attributes["blue"] = (point.attributes["red"].toInt() + 32767) % 65535;
+
+                m_currentPointCloud.push_back(point);
+            }
+            qDebug() << "Successfully loaded XYZ/TXT file with" << m_currentPointCloud.size() << "points";
         } else {
-            // 简化实现：生成测试数据
-            generateSampleData(10000);
+            // 不支持的格式
+            throw std::runtime_error(QString("Unsupported file format: %1").arg(ext).toStdString());
         }
 
         timer.elapsed(); // 记录加载时间
@@ -1859,7 +2041,7 @@ void Stage1DemoWidget::onColorSchemeChanged(int scheme)
         static_cast<WallExtraction::ColorScheme>(scheme);
     m_colorMapper->setColorScheme(colorScheme);
 
-    // 颜色方案已更改
+    qDebug() << "Color scheme changed to:" << scheme;
 
     // 自动更新值范围
     if (!m_currentPointCloud.empty()) {
@@ -1867,9 +2049,16 @@ void Stage1DemoWidget::onColorSchemeChanged(int scheme)
         auto range = m_colorMapper->getValueRange();
         m_minValueSpin->setValue(range.first);
         m_maxValueSpin->setValue(range.second);
+        qDebug() << "Updated value range:" << range.first << "to" << range.second;
     }
 
     generateColorBar();
+
+    // 重新渲染点云以应用新的颜色映射
+    if (!m_currentPointCloud.empty()) {
+        updateTopDownView();
+        qDebug() << "Triggered re-rendering with new color scheme";
+    }
 }
 
 void Stage1DemoWidget::onColorRangeChanged()
@@ -1878,11 +2067,19 @@ void Stage1DemoWidget::onColorRangeChanged()
     float maxVal = m_maxValueSpin->value();
 
     if (minVal >= maxVal) {
+        qDebug() << "Invalid range: min" << minVal << ">= max" << maxVal;
         return;
     }
 
+    qDebug() << "Color range changed to:" << minVal << "-" << maxVal;
     m_colorMapper->setValueRange(minVal, maxVal);
     generateColorBar();
+
+    // 重新渲染点云以应用新的数值范围
+    if (!m_currentPointCloud.empty()) {
+        updateTopDownView();
+        qDebug() << "Triggered re-rendering with new value range";
+    }
 }
 
 void Stage1DemoWidget::generateColorBar()
@@ -1916,51 +2113,143 @@ void Stage1DemoWidget::renderTopDownView()
         return;
     }
 
+    qDebug() << "=== Starting Top-Down View Rendering ===";
+    qDebug() << "Point cloud size:" << m_currentPointCloud.size();
+
+    // 大数据量检测和处理
+    const size_t MAX_RENDER_POINTS = 500000; // 50万个点的渲染限制
+    std::vector<WallExtraction::PointWithAttributes> renderPoints;
+
+    if (m_currentPointCloud.size() > MAX_RENDER_POINTS) {
+        qDebug() << "Large point cloud detected (" << m_currentPointCloud.size() << " points)";
+        qDebug() << "Applying intelligent sampling to" << MAX_RENDER_POINTS << "points";
+
+        // 智能采样
+        renderPoints = performIntelligentSampling(m_currentPointCloud, MAX_RENDER_POINTS);
+
+        // 显示采样信息给用户
+        QMessageBox::information(this, "大数据量处理",
+            QString("检测到大点云文件（%1个点）\n"
+                   "为了确保渲染性能，已自动采样到%2个点\n"
+                   "如需处理完整数据，请先生成LOD级别")
+            .arg(m_currentPointCloud.size())
+            .arg(renderPoints.size()));
+    } else {
+        renderPoints = m_currentPointCloud;
+    }
+
+    qDebug() << "Rendering point count:" << renderPoints.size();
+
+    // 验证点云数据
+    validatePointCloudAttributes();
+
+    // 调试渲染管道
+    debugRenderingPipeline();
+
     // 渲染俯视图
     QApplication::processEvents();
 
-    // 设置渲染参数
-    m_renderer->setViewportSize(QSize(400, 300));
+    // 动态计算渲染区域大小
+    QSize renderSize = calculateOptimalRenderSize();
+    m_renderer->setViewportSize(renderSize);
+    qDebug() << "Render viewport size:" << renderSize;
 
-    // 计算合适的视图边界（简化实现）
-    if (!m_currentSimpleCloud.empty()) {
-        // 简化：设置固定的视图边界
-        m_renderer->setViewBounds(-100.0f, 100.0f, -100.0f, 100.0f);
-    }
+    // 动态计算视图边界
+    QRectF viewBounds = calculatePointCloudBounds();
+    m_renderer->setViewBounds(viewBounds.left(), viewBounds.right(),
+                             viewBounds.top(), viewBounds.bottom());
+    qDebug() << "View bounds:" << viewBounds;
+
+    // 优化颜色映射
+    optimizeColorMappingForTopDown();
 
     QElapsedTimer timer;
     timer.start();
 
     bool success = false;
     if (m_lodManager->getLODLevelCount() > 0) {
-        // 使用LOD数据渲染
+        // 使用LOD数据渲染 - 注意：LOD返回的是QVector3D类型，需要转换
         int lodLevel = m_lodLevelSlider->value();
         auto lodPoints = m_lodManager->getLODPoints(lodLevel);
+
+        // 为了支持完整的颜色映射，我们需要从原始数据中提取对应的属性
+        // 这里暂时使用QVector3D版本，但只支持高度映射
         success = m_renderer->renderTopDownView(lodPoints);
+        qDebug() << "Rendering with LOD level" << lodLevel << "(" << lodPoints.size() << "points) - Limited to height mapping";
     } else {
-        // 使用原始数据渲染
-        success = m_renderer->renderTopDownView(m_currentPointCloud);
+        // 使用采样后的数据渲染 - 这里使用PointWithAttributes版本，支持所有颜色方案
+        success = m_renderer->renderTopDownView(renderPoints);
+        qDebug() << "Rendering with sampled PointWithAttributes data (" << renderPoints.size() << "points) - Full color mapping support";
     }
 
     qint64 renderTime = timer.elapsed();
 
     if (success) {
         QImage renderResult = m_renderer->getRenderBuffer();
-        if (!renderResult.isNull()) {
+        qDebug() << "Render result size:" << renderResult.size();
+        qDebug() << "Render result format:" << renderResult.format();
+        qDebug() << "Render result null:" << renderResult.isNull();
+
+        if (!renderResult.isNull() && !renderResult.size().isEmpty()) {
+            // 确保图像不为空且有有效尺寸
             QPixmap pixmap = QPixmap::fromImage(renderResult);
-            m_renderDisplayLabel->setPixmap(pixmap.scaled(m_renderDisplayLabel->size(),
-                                                         Qt::KeepAspectRatio,
-                                                         Qt::SmoothTransformation));
-            m_renderDisplayLabel->setText("");
+
+            // 获取显示标签的当前尺寸
+            QSize labelSize = m_renderDisplayLabel->size();
+            qDebug() << "Display label size:" << labelSize;
+
+            if (labelSize.width() > 0 && labelSize.height() > 0) {
+                // 缩放图像以适应显示区域
+                QPixmap scaledPixmap = pixmap.scaled(labelSize,
+                                                   Qt::KeepAspectRatio,
+                                                   Qt::SmoothTransformation);
+                m_renderDisplayLabel->setPixmap(scaledPixmap);
+                m_renderDisplayLabel->setText("");
+
+                qDebug() << "Successfully displayed render result";
+                qDebug() << "Original size:" << pixmap.size() << "-> Scaled size:" << scaledPixmap.size();
+            } else {
+                qDebug() << "Display label has invalid size, using original image";
+                m_renderDisplayLabel->setPixmap(pixmap);
+                m_renderDisplayLabel->setText("");
+            }
+        } else {
+            qDebug() << "Render result is null or empty";
+            m_renderDisplayLabel->setText("渲染结果为空\n请检查点云数据和渲染参数");
         }
 
         m_stats.lastRenderTime = renderTime;
         m_stats.fps = 1000.0 / qMax(renderTime, qint64(1));
 
-        // 渲染完成
+        qDebug() << "Rendering completed successfully in" << renderTime << "ms";
     } else {
-        QMessageBox::warning(this, "Error", "Rendering failed");
-        // 渲染失败
+        qDebug() << "Rendering failed";
+        m_renderDisplayLabel->setText("渲染失败\n请检查点云数据和渲染设置");
+
+        // 详细的错误诊断
+        QString errorDetails = QString("俯视图渲染失败\n\n详细信息：\n"
+                                     "• 原始点云大小：%1 个点\n"
+                                     "• 渲染点云大小：%2 个点\n"
+                                     "• 渲染模式：%3\n"
+                                     "• 点大小：%4\n"
+                                     "• 视口大小：%5\n\n"
+                                     "可能的原因：\n"
+                                     "• 投影变换失败\n"
+                                     "• 视锥体剔除过度\n"
+                                     "• 渲染缓冲区问题\n"
+                                     "• 内存不足\n\n"
+                                     "建议解决方案：\n"
+                                     "• 尝试生成LOD级别\n"
+                                     "• 调整渲染参数\n"
+                                     "• 检查点云数据有效性")
+                              .arg(m_currentPointCloud.size())
+                              .arg(renderPoints.size())
+                              .arg(static_cast<int>(m_renderer->getRenderMode()))
+                              .arg(m_renderer->getPointSize())
+                              .arg(QString("%1x%2").arg(m_renderer->getViewportSize().width())
+                                                   .arg(m_renderer->getViewportSize().height()));
+
+        QMessageBox::warning(this, "渲染错误", errorDetails);
     }
 }
 
@@ -2005,19 +2294,31 @@ void Stage1DemoWidget::updateRenderView()
 void Stage1DemoWidget::processLoadedPointCloud()
 {
     if (m_currentPointCloud.empty()) {
+        qDebug() << "ERROR: Point cloud is empty in processLoadedPointCloud()";
         return;
     }
+
+    qDebug() << "=== Processing Loaded Point Cloud ===";
+    qDebug() << "Point count:" << m_currentPointCloud.size();
+
+    // 详细分析点云数据
+    analyzePointCloudData();
 
     m_stats.pointCount = m_currentPointCloud.size();
 
     // 自动计算颜色映射范围
     m_colorMapper->autoCalculateValueRange(m_currentPointCloud);
     auto range = m_colorMapper->getValueRange();
+
+    qDebug() << "Color mapping range:" << range.first << "to" << range.second;
+
     m_minValueSpin->setValue(range.first);
     m_maxValueSpin->setValue(range.second);
 
     // 生成颜色条
     generateColorBar();
+
+    qDebug() << "Point cloud processing completed";
 
     // 重置LOD信息
     m_lodInfoLabel->setText("LOD not generated");
@@ -2045,36 +2346,393 @@ void Stage1DemoWidget::updatePointCloudInfo()
 
 void Stage1DemoWidget::generateSampleData(int pointCount)
 {
+    qDebug() << "=== Generating Sample Data ===";
+    qDebug() << "Requested point count:" << pointCount;
+
     m_currentPointCloud.clear();
     m_currentSimpleCloud.clear();
 
     m_currentPointCloud.reserve(pointCount);
     m_currentSimpleCloud.reserve(pointCount);
 
-    // 生成建筑物样式的点云数据
+    // 生成更有意义的建筑物样式点云数据
     for (int i = 0; i < pointCount; ++i) {
         WallExtraction::PointWithAttributes point;
 
-        float x = (i % 200) * 0.5f;
-        float y = ((i / 200) % 200) * 0.5f;
-        float z = qSin(x * 0.1f) * qCos(y * 0.1f) * 5.0f + 10.0f;
+        // 创建更分散的坐标分布
+        float x = (i % 200) * 0.5f - 50.0f;  // -50 到 50
+        float y = ((i / 200) % 200) * 0.5f - 50.0f;  // -50 到 50
+
+        // 创建更有变化的高度分布
+        float baseHeight = 5.0f;
+        float variation = qSin(x * 0.05f) * qCos(y * 0.05f) * 8.0f;
+        float z = baseHeight + variation + (i % 10) * 0.5f;  // 0 到 18
 
         point.position = QVector3D(x, y, z);
-        point.attributes["intensity"] = (i * 100) % 65536;
-        point.attributes["classification"] = i % 10;
-        point.attributes["red"] = (i * 123) % 65536;
-        point.attributes["green"] = (i * 456) % 65536;
-        point.attributes["blue"] = (i * 789) % 65536;
+
+        // 生成更合理的属性值
+        point.attributes["intensity"] = static_cast<int>(z * 1000 + (i % 1000));  // 基于高度的强度
+        point.attributes["classification"] = (z > 10.0f) ? 6 : 2;  // 建筑物或地面
+
+        // 基于高度的RGB颜色
+        int heightColor = static_cast<int>((z / 20.0f) * 65535);
+        point.attributes["red"] = heightColor;
+        point.attributes["green"] = 65535 - heightColor;
+        point.attributes["blue"] = (heightColor + 32767) % 65535;
 
         m_currentPointCloud.push_back(point);
         m_currentSimpleCloud.push_back(point.position);
     }
+
+    qDebug() << "Generated" << m_currentPointCloud.size() << "points";
+    qDebug() << "Sample data generation completed";
 }
 
 void Stage1DemoWidget::updateTopDownView()
 {
     if (!m_currentPointCloud.empty()) {
         renderTopDownView();
+    }
+}
+
+QSize Stage1DemoWidget::calculateOptimalRenderSize() const
+{
+    // 获取显示区域的实际大小
+    QSize displaySize = m_renderDisplayLabel->size();
+
+    // 确保最小尺寸
+    int minSize = 400;
+    int width = qMax(minSize, displaySize.width());
+    int height = qMax(minSize, displaySize.height());
+
+    // 限制最大尺寸以保证性能
+    int maxSize = 1200;
+    width = qMin(maxSize, width);
+    height = qMin(maxSize, height);
+
+    qDebug() << "Display label size:" << displaySize << "-> Optimal render size:" << QSize(width, height);
+    return QSize(width, height);
+}
+
+QRectF Stage1DemoWidget::calculatePointCloudBounds() const
+{
+    if (m_currentPointCloud.empty()) {
+        return QRectF(-100, -100, 200, 200); // 默认边界
+    }
+
+    // 计算点云的实际边界
+    float minX = std::numeric_limits<float>::max();
+    float maxX = std::numeric_limits<float>::lowest();
+    float minY = std::numeric_limits<float>::max();
+    float maxY = std::numeric_limits<float>::lowest();
+
+    for (const auto& point : m_currentPointCloud) {
+        minX = qMin(minX, point.position.x());
+        maxX = qMax(maxX, point.position.x());
+        minY = qMin(minY, point.position.y());
+        maxY = qMax(maxY, point.position.y());
+    }
+
+    // 添加边距（10%）
+    float rangeX = maxX - minX;
+    float rangeY = maxY - minY;
+    float marginX = rangeX * 0.1f;
+    float marginY = rangeY * 0.1f;
+
+    QRectF bounds(minX - marginX, minY - marginY,
+                  rangeX + 2 * marginX, rangeY + 2 * marginY);
+
+    qDebug() << "Point cloud bounds:" << bounds;
+    qDebug() << "X range:" << minX << "to" << maxX << "(" << rangeX << ")";
+    qDebug() << "Y range:" << minY << "to" << maxY << "(" << rangeY << ")";
+
+    return bounds;
+}
+
+void Stage1DemoWidget::optimizeColorMappingForTopDown()
+{
+    if (!m_colorMapper || m_currentPointCloud.empty()) {
+        return;
+    }
+
+    qDebug() << "=== Optimizing Color Mapping for Top-Down View ===";
+
+    // 自动计算颜色映射范围
+    m_colorMapper->autoCalculateValueRange(m_currentPointCloud);
+    auto range = m_colorMapper->getValueRange();
+
+    qDebug() << "Auto-calculated color range:" << range.first << "to" << range.second;
+
+    // 更新UI中的数值范围显示
+    if (m_minValueSpin && m_maxValueSpin) {
+        m_minValueSpin->setValue(range.first);
+        m_maxValueSpin->setValue(range.second);
+        qDebug() << "Updated UI range controls";
+    }
+
+    // 生成新的颜色条
+    generateColorBar();
+
+    qDebug() << "Color mapping optimization completed";
+}
+
+void Stage1DemoWidget::analyzePointCloudData()
+{
+    if (m_currentPointCloud.empty()) {
+        qDebug() << "WARNING: Cannot analyze empty point cloud";
+        return;
+    }
+
+    qDebug() << "=== Point Cloud Data Analysis ===";
+
+    // 统计坐标范围
+    float minX = std::numeric_limits<float>::max();
+    float maxX = std::numeric_limits<float>::lowest();
+    float minY = std::numeric_limits<float>::max();
+    float maxY = std::numeric_limits<float>::lowest();
+    float minZ = std::numeric_limits<float>::max();
+    float maxZ = std::numeric_limits<float>::lowest();
+
+    // 统计属性
+    QSet<QString> availableAttributes;
+    QMap<QString, QPair<float, float>> attributeRanges;
+
+    for (const auto& point : m_currentPointCloud) {
+        // 坐标范围
+        minX = qMin(minX, point.position.x());
+        maxX = qMax(maxX, point.position.x());
+        minY = qMin(minY, point.position.y());
+        maxY = qMax(maxY, point.position.y());
+        minZ = qMin(minZ, point.position.z());
+        maxZ = qMax(maxZ, point.position.z());
+
+        // 属性统计
+        for (auto it = point.attributes.begin(); it != point.attributes.end(); ++it) {
+            QString attrName = it.key();
+            float attrValue = it.value().toFloat();
+
+            availableAttributes.insert(attrName);
+
+            if (!attributeRanges.contains(attrName)) {
+                attributeRanges[attrName] = qMakePair(attrValue, attrValue);
+            } else {
+                auto& range = attributeRanges[attrName];
+                range.first = qMin(range.first, attrValue);
+                range.second = qMax(range.second, attrValue);
+            }
+        }
+    }
+
+    // 输出分析结果
+    qDebug() << "Point count:" << m_currentPointCloud.size();
+    qDebug() << "X range:" << minX << "to" << maxX << "(" << (maxX - minX) << ")";
+    qDebug() << "Y range:" << minY << "to" << maxY << "(" << (maxY - minY) << ")";
+    qDebug() << "Z range:" << minZ << "to" << maxZ << "(" << (maxZ - minZ) << ")";
+
+    qDebug() << "Available attributes:" << availableAttributes.values();
+    for (auto it = attributeRanges.begin(); it != attributeRanges.end(); ++it) {
+        qDebug() << "Attribute" << it.key() << "range:" << it.value().first << "to" << it.value().second;
+    }
+
+    // 检查数据有效性
+    if (maxX - minX < 0.001f || maxY - minY < 0.001f) {
+        qDebug() << "WARNING: Point cloud has very small spatial extent";
+    }
+
+    if (availableAttributes.isEmpty()) {
+        qDebug() << "WARNING: Point cloud has no attributes";
+    }
+
+    qDebug() << "Point cloud analysis completed";
+}
+
+void Stage1DemoWidget::validatePointCloudAttributes()
+{
+    qDebug() << "=== Validating Point Cloud Attributes ===";
+
+    if (m_currentPointCloud.empty()) {
+        qDebug() << "ERROR: Point cloud is empty";
+        return;
+    }
+
+    // 检查前几个点的属性
+    for (int i = 0; i < qMin(3, static_cast<int>(m_currentPointCloud.size())); ++i) {
+        const auto& point = m_currentPointCloud[i];
+        qDebug() << "Point" << i << ":";
+        qDebug() << "  Position:" << point.position;
+        qDebug() << "  Attributes count:" << point.attributes.size();
+
+        for (auto it = point.attributes.begin(); it != point.attributes.end(); ++it) {
+            qDebug() << "    " << it.key() << ":" << it.value();
+        }
+    }
+}
+
+void Stage1DemoWidget::debugRenderingPipeline()
+{
+    qDebug() << "=== Debugging Rendering Pipeline ===";
+
+    // 检查渲染器状态
+    if (!m_renderer) {
+        qDebug() << "ERROR: Renderer is null";
+        return;
+    }
+
+    qDebug() << "Renderer initialized:" << m_renderer->isInitialized();
+    qDebug() << "Render mode:" << static_cast<int>(m_renderer->getRenderMode());
+    qDebug() << "Point size:" << m_renderer->getPointSize();
+    qDebug() << "Viewport size:" << m_renderer->getViewportSize();
+    qDebug() << "View bounds:" << m_renderer->getViewBounds();
+
+    // 检查颜色映射器状态
+    if (!m_colorMapper) {
+        qDebug() << "ERROR: Color mapper is null";
+        return;
+    }
+
+    qDebug() << "Color mapper initialized:" << m_colorMapper->isInitialized();
+    qDebug() << "Current color scheme:" << static_cast<int>(m_colorMapper->getCurrentColorScheme());
+    auto range = m_colorMapper->getValueRange();
+    qDebug() << "Color mapping range:" << range.first << "to" << range.second;
+
+    qDebug() << "Rendering pipeline debug completed";
+}
+
+std::vector<WallExtraction::PointWithAttributes> Stage1DemoWidget::performIntelligentSampling(
+    const std::vector<WallExtraction::PointWithAttributes>& points,
+    size_t targetCount) const
+{
+    qDebug() << "=== Performing Intelligent Sampling ===";
+    qDebug() << "Input points:" << points.size() << "Target count:" << targetCount;
+
+    if (points.size() <= targetCount) {
+        qDebug() << "No sampling needed";
+        return points;
+    }
+
+    std::vector<WallExtraction::PointWithAttributes> sampledPoints;
+    sampledPoints.reserve(targetCount);
+
+    // 计算采样步长
+    double step = static_cast<double>(points.size()) / targetCount;
+    qDebug() << "Sampling step:" << step;
+
+    // 均匀采样策略
+    for (size_t i = 0; i < targetCount; ++i) {
+        size_t index = static_cast<size_t>(i * step);
+        if (index < points.size()) {
+            sampledPoints.push_back(points[index]);
+        }
+    }
+
+    qDebug() << "Sampling completed. Output points:" << sampledPoints.size();
+
+    // 验证采样结果的空间分布
+    if (!sampledPoints.empty()) {
+        float minX = sampledPoints[0].position.x();
+        float maxX = minX, minY = sampledPoints[0].position.y();
+        float maxY = minY, minZ = sampledPoints[0].position.z(), maxZ = minZ;
+
+        for (const auto& point : sampledPoints) {
+            minX = qMin(minX, point.position.x());
+            maxX = qMax(maxX, point.position.x());
+            minY = qMin(minY, point.position.y());
+            maxY = qMax(maxY, point.position.y());
+            minZ = qMin(minZ, point.position.z());
+            maxZ = qMax(maxZ, point.position.z());
+        }
+
+        qDebug() << "Sampled data bounds:";
+        qDebug() << "  X:" << minX << "to" << maxX;
+        qDebug() << "  Y:" << minY << "to" << maxY;
+        qDebug() << "  Z:" << minZ << "to" << maxZ;
+    }
+
+    return sampledPoints;
+}
+
+void Stage1DemoWidget::generateValidTestData(int pointCount)
+{
+    qDebug() << "=== Generating Valid Test Data ===";
+    qDebug() << "Generating" << pointCount << "test points";
+
+    m_currentPointCloud.clear();
+    m_currentSimpleCloud.clear();
+    m_currentPointCloud.reserve(pointCount);
+    m_currentSimpleCloud.reserve(pointCount);
+
+    // 生成一个简单的房间结构
+    const float roomWidth = 10.0f;
+    const float roomHeight = 8.0f;
+    const float roomDepth = 3.0f;
+
+    for (int i = 0; i < pointCount; ++i) {
+        QVector3D position;
+
+        // 生成不同类型的点
+        float type = static_cast<float>(i) / pointCount;
+
+        if (type < 0.4f) {
+            // 地面点 (40%)
+            position.setX((static_cast<float>(rand()) / RAND_MAX - 0.5f) * roomWidth);
+            position.setY((static_cast<float>(rand()) / RAND_MAX - 0.5f) * roomHeight);
+            position.setZ(0.0f + (static_cast<float>(rand()) / RAND_MAX) * 0.2f);
+        } else if (type < 0.7f) {
+            // 墙面点 (30%)
+            if (rand() % 2 == 0) {
+                // 左右墙
+                position.setX((rand() % 2 == 0) ? -roomWidth/2 : roomWidth/2);
+                position.setY((static_cast<float>(rand()) / RAND_MAX - 0.5f) * roomHeight);
+                position.setZ((static_cast<float>(rand()) / RAND_MAX) * roomDepth);
+            } else {
+                // 前后墙
+                position.setX((static_cast<float>(rand()) / RAND_MAX - 0.5f) * roomWidth);
+                position.setY((rand() % 2 == 0) ? -roomHeight/2 : roomHeight/2);
+                position.setZ((static_cast<float>(rand()) / RAND_MAX) * roomDepth);
+            }
+        } else {
+            // 天花板和其他点 (30%)
+            position.setX((static_cast<float>(rand()) / RAND_MAX - 0.5f) * roomWidth);
+            position.setY((static_cast<float>(rand()) / RAND_MAX - 0.5f) * roomHeight);
+            position.setZ(roomDepth + (static_cast<float>(rand()) / RAND_MAX) * 0.5f);
+        }
+
+        // 创建点云数据
+        WallExtraction::PointWithAttributes point;
+        point.position = position;
+
+        // 生成属性
+        point.attributes["intensity"] = static_cast<int>(position.z() * 1000);
+        point.attributes["classification"] = (position.z() < 0.5f) ? 2 : 6; // 地面或其他
+        point.attributes["red"] = static_cast<int>((position.z() / roomDepth) * 65535);
+        point.attributes["green"] = 65535 - point.attributes["red"].toInt();
+        point.attributes["blue"] = (point.attributes["red"].toInt() + 32767) % 65535;
+
+        m_currentPointCloud.push_back(point);
+        m_currentSimpleCloud.push_back(position);
+    }
+
+    qDebug() << "Test data generation completed:" << m_currentPointCloud.size() << "points";
+
+    // 显示数据范围
+    if (!m_currentSimpleCloud.empty()) {
+        float minX = m_currentSimpleCloud[0].x(), maxX = minX;
+        float minY = m_currentSimpleCloud[0].y(), maxY = minY;
+        float minZ = m_currentSimpleCloud[0].z(), maxZ = minZ;
+
+        for (const auto& point : m_currentSimpleCloud) {
+            minX = qMin(minX, point.x());
+            maxX = qMax(maxX, point.x());
+            minY = qMin(minY, point.y());
+            maxY = qMax(maxY, point.y());
+            minZ = qMin(minZ, point.z());
+            maxZ = qMax(maxZ, point.z());
+        }
+
+        qDebug() << "Test data bounds:";
+        qDebug() << "  X:" << minX << "to" << maxX;
+        qDebug() << "  Y:" << minY << "to" << maxY;
+        qDebug() << "  Z:" << minZ << "to" << maxZ;
     }
 }
 
