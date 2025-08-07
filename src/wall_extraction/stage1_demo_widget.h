@@ -30,6 +30,8 @@ namespace WallExtraction {
     class PointCloudLODManager;
     class PointCloudMemoryManager;
     class SpatialIndex;
+    class LineDrawingToolbar;
+    class LinePropertyPanel;
     enum class ColorScheme;
     enum class TopDownRenderMode;
     struct PointWithAttributes;
@@ -82,7 +84,14 @@ private slots:
     void renderTopDownView();
     void saveRenderResult();
     void saveCurrentImage();
-    
+
+    // 线段绘制控制
+    void onLineDrawingModeChanged();
+    void onLineSegmentAdded();
+    void onLineSegmentSelected(int segmentId);
+    void onLineSegmentRemoved(int segmentId);
+    void toggleLinePropertyPanel();
+
     // 实时更新
     void updateRenderView();
 
@@ -102,6 +111,7 @@ private:
     void createCompactLODControl();
     void createCompactColorControl();
     void createCompactRenderControl();
+    void createLineDrawingControls();
 
     // 响应式样式管理
     QString getResponsiveButtonStyle(const QString& baseColor, bool isPrimary = false);
@@ -159,6 +169,10 @@ private:
     QWidget* m_compactLODWidget;
     QWidget* m_compactColorWidget;
     QWidget* m_compactRenderWidget;
+
+    // 线段绘制UI组件
+    WallExtraction::LineDrawingToolbar* m_lineDrawingToolbar;
+    WallExtraction::LinePropertyPanel* m_linePropertyPanel;
     
     // 控制组
     QGroupBox* m_fileControlGroup;

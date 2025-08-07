@@ -3,13 +3,18 @@
 
 #include <QObject>
 #include <QWidget>
+#include <QVector3D>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 
 // 前向声明
 class LineDrawingTool;
 class WallFittingAlgorithm;
 class WireframeGenerator;
+
+// 包含必要的结构定义
+#include "wall_fitting_algorithm.h"
 
 namespace WallExtraction {
 
@@ -133,6 +138,45 @@ public:
      */
     void processInvalidOperation();
 
+    /**
+     * @brief 基于用户绘制线段进行墙面拟合
+     * @param pointCloud 点云数据
+     * @return 拟合是否成功
+     */
+    bool performLineBasedWallFitting(const std::vector<QVector3D>& pointCloud);
+
+    /**
+     * @brief 自动墙面拟合（仅基于点云）
+     * @param pointCloud 点云数据
+     * @return 拟合是否成功
+     */
+    bool performAutoWallFitting(const std::vector<QVector3D>& pointCloud);
+
+    /**
+     * @brief 获取最近的墙面拟合结果
+     * @return 墙面拟合结果
+     */
+    WallFittingResult getLastWallFittingResult() const;
+
+    /**
+     * @brief 清除所有线段和墙面数据
+     */
+    void clearAllData();
+
+    /**
+     * @brief 导出墙面数据
+     * @param filename 文件名
+     * @return 导出是否成功
+     */
+    bool exportWallData(const QString& filename) const;
+
+    /**
+     * @brief 导入墙面数据
+     * @param filename 文件名
+     * @return 导入是否成功
+     */
+    bool importWallData(const QString& filename);
+
 signals:
     /**
      * @brief 交互模式改变信号
@@ -157,6 +201,30 @@ signals:
      * @param error 错误消息
      */
     void errorOccurred(const QString& error);
+
+    /**
+     * @brief 墙面拟合开始信号
+     */
+    void wallFittingStarted();
+
+    /**
+     * @brief 墙面拟合完成信号
+     * @param result 拟合结果
+     */
+    void wallFittingCompleted(const WallFittingResult& result);
+
+    /**
+     * @brief 墙面拟合失败信号
+     * @param error 错误消息
+     */
+    void wallFittingFailed(const QString& error);
+
+    /**
+     * @brief 墙面拟合进度信号
+     * @param percentage 进度百分比
+     * @param status 状态描述
+     */
+    void wallFittingProgress(int percentage, const QString& status);
 
 private slots:
     /**
@@ -202,6 +270,13 @@ private:
     std::unique_ptr<LineDrawingTool> m_lineDrawingTool;
     std::unique_ptr<WallFittingAlgorithm> m_wallFittingAlgorithm;
     std::unique_ptr<WireframeGenerator> m_wireframeGenerator;
+
+    // 数据缓存
+    std::vector<QVector3D> m_currentPointCloud;
+    WallFittingResult m_lastWallFittingResult;
+
+    // 处理状态
+    bool m_isProcessing;
 };
 
 } // namespace WallExtraction

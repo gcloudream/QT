@@ -24,8 +24,15 @@ SOURCES += \
     pcdreader.cpp \
     src/wall_extraction/wall_extraction_manager.cpp \
     src/wall_extraction/line_drawing_tool.cpp \
+    src/wall_extraction/line_drawing_toolbar.cpp \
+    src/wall_extraction/line_property_panel.cpp \
+    src/wall_extraction/line_info_panel.cpp \
+    src/wall_extraction/line_list_widget.cpp \
     src/wall_extraction/wall_fitting_algorithm.cpp \
     src/wall_extraction/wireframe_generator.cpp \
+    src/wall_extraction/wall_fitting_progress_dialog.cpp \
+    src/wall_extraction/wall_fitting_result_dialog.cpp \
+    src/wall_extraction/ui_integration_helper.cpp \
     src/wall_extraction/las_reader.cpp \
     src/wall_extraction/point_cloud_processor.cpp \
     src/wall_extraction/point_cloud_lod_manager.cpp \
@@ -48,8 +55,15 @@ HEADERS += \
     pcdreader.h \
     src/wall_extraction/wall_extraction_manager.h \
     src/wall_extraction/line_drawing_tool.h \
+    src/wall_extraction/line_drawing_toolbar.h \
+    src/wall_extraction/line_property_panel.h \
+    src/wall_extraction/line_info_panel.h \
+    src/wall_extraction/line_list_widget.h \
     src/wall_extraction/wall_fitting_algorithm.h \
     src/wall_extraction/wireframe_generator.h \
+    src/wall_extraction/wall_fitting_progress_dialog.h \
+    src/wall_extraction/wall_fitting_result_dialog.h \
+    src/wall_extraction/ui_integration_helper.h \
     src/wall_extraction/las_reader.h \
     src/wall_extraction/point_cloud_processor.h \
     src/wall_extraction/point_cloud_lod_manager.h \

@@ -4,6 +4,7 @@
 #include "wireframe_generator.h"
 #include <QDebug>
 #include <QMetaType>
+#include <QVector3D>
 
 namespace WallExtraction {
 
@@ -31,6 +32,7 @@ WallExtractionManager::WallExtractionManager(QWidget* parent)
     , m_active(false)
     , m_currentMode(InteractionMode::PointCloudView)
     , m_parentWidget(parent)
+    , m_isProcessing(false)
 {
     // 注册元类型以支持信号槽
     qRegisterMetaType<InteractionMode>("InteractionMode");
@@ -215,6 +217,215 @@ void WallExtractionManager::processInvalidOperation()
     throw WallExtractionException("Invalid operation requested");
 }
 
+bool WallExtractionManager::performLineBasedWallFitting(const std::vector<QVector3D>& pointCloud)
+{
+    if (!m_initialized) {
+        qWarning() << "Cannot perform wall fitting on uninitialized manager";
+        return false;
+    }
+
+    if (m_isProcessing) {
+        qWarning() << "Wall fitting already in progress";
+        return false;
+    }
+
+    if (pointCloud.empty()) {
+        qWarning() << "Cannot perform wall fitting with empty point cloud";
+        return false;
+    }
+
+    try {
+        m_isProcessing = true;
+        m_currentPointCloud = pointCloud;
+
+        emit wallFittingStarted();
+        setStatusMessage("开始基于线段的墙面拟合");
+
+        // 获取用户绘制的线段
+        const auto& userLines = m_lineDrawingTool->getLineSegments();
+        if (userLines.empty()) {
+            m_isProcessing = false;
+            QString error = "没有可用的用户绘制线段";
+            emit wallFittingFailed(error);
+            return false;
+        }
+
+        qDebug() << "Starting line-based wall fitting with" << userLines.size()
+                 << "user lines and" << pointCloud.size() << "points";
+
+        // 执行基于线段的墙面拟合
+        m_lastWallFittingResult = m_wallFittingAlgorithm->fitWallsFromLines(pointCloud, userLines);
+
+        m_isProcessing = false;
+
+        if (m_lastWallFittingResult.success) {
+            emit wallFittingCompleted(m_lastWallFittingResult);
+            setStatusMessage(QString("墙面拟合完成：提取到 %1 个墙面")
+                           .arg(m_lastWallFittingResult.walls.size()));
+            qDebug() << "Line-based wall fitting completed successfully";
+            return true;
+        } else {
+            emit wallFittingFailed(m_lastWallFittingResult.errorMessage);
+            setStatusMessage("墙面拟合失败");
+            return false;
+        }
+
+    } catch (const std::exception& e) {
+        m_isProcessing = false;
+        QString error = QString("墙面拟合过程中发生异常: %1").arg(e.what());
+        qCritical() << error;
+        emit wallFittingFailed(error);
+        return false;
+    }
+}
+
+bool WallExtractionManager::performAutoWallFitting(const std::vector<QVector3D>& pointCloud)
+{
+    if (!m_initialized) {
+        qWarning() << "Cannot perform wall fitting on uninitialized manager";
+        return false;
+    }
+
+    if (m_isProcessing) {
+        qWarning() << "Wall fitting already in progress";
+        return false;
+    }
+
+    if (pointCloud.empty()) {
+        qWarning() << "Cannot perform wall fitting with empty point cloud";
+        return false;
+    }
+
+    try {
+        m_isProcessing = true;
+        m_currentPointCloud = pointCloud;
+
+        emit wallFittingStarted();
+        setStatusMessage("开始自动墙面拟合");
+
+        qDebug() << "Starting automatic wall fitting with" << pointCloud.size() << "points";
+
+        // 执行自动墙面拟合
+        m_lastWallFittingResult = m_wallFittingAlgorithm->fitWallsFromPointCloud(pointCloud);
+
+        m_isProcessing = false;
+
+        if (m_lastWallFittingResult.success) {
+            emit wallFittingCompleted(m_lastWallFittingResult);
+            setStatusMessage(QString("自动墙面拟合完成：提取到 %1 个墙面")
+                           .arg(m_lastWallFittingResult.walls.size()));
+            qDebug() << "Automatic wall fitting completed successfully";
+            return true;
+        } else {
+            emit wallFittingFailed(m_lastWallFittingResult.errorMessage);
+            setStatusMessage("自动墙面拟合失败");
+            return false;
+        }
+
+    } catch (const std::exception& e) {
+        m_isProcessing = false;
+        QString error = QString("自动墙面拟合过程中发生异常: %1").arg(e.what());
+        qCritical() << error;
+        emit wallFittingFailed(error);
+        return false;
+    }
+}
+
+WallFittingResult WallExtractionManager::getLastWallFittingResult() const
+{
+    return m_lastWallFittingResult;
+}
+
+void WallExtractionManager::clearAllData()
+{
+    if (m_isProcessing) {
+        qWarning() << "Cannot clear data while processing";
+        return;
+    }
+
+    try {
+        // 清除线段绘制工具的数据
+        if (m_lineDrawingTool) {
+            m_lineDrawingTool->clearAll();
+        }
+
+        // 清除墙面拟合算法的数据
+        if (m_wallFittingAlgorithm) {
+            m_wallFittingAlgorithm->reset();
+        }
+
+        // 清除缓存数据
+        m_currentPointCloud.clear();
+        m_lastWallFittingResult = WallFittingResult();
+
+        setStatusMessage("所有数据已清除");
+        qDebug() << "All data cleared";
+
+    } catch (const std::exception& e) {
+        qCritical() << "Exception during data clearing:" << e.what();
+        emit errorOccurred(QString("清除数据时发生错误: %1").arg(e.what()));
+    }
+}
+
+bool WallExtractionManager::exportWallData(const QString& filename) const
+{
+    if (!m_initialized) {
+        qWarning() << "Cannot export data from uninitialized manager";
+        return false;
+    }
+
+    try {
+        // 导出线段数据
+        if (m_lineDrawingTool && !m_lineDrawingTool->saveToFile(filename + "_lines.json")) {
+            qWarning() << "Failed to export line data";
+            return false;
+        }
+
+        // 导出墙面数据（如果有的话）
+        if (m_lastWallFittingResult.success && !m_lastWallFittingResult.walls.empty()) {
+            // 这里可以添加墙面数据的导出逻辑
+            qDebug() << "Wall data export not yet implemented";
+        }
+
+        qDebug() << "Data exported to" << filename;
+        return true;
+
+    } catch (const std::exception& e) {
+        qCritical() << "Exception during data export:" << e.what();
+        return false;
+    }
+}
+
+bool WallExtractionManager::importWallData(const QString& filename)
+{
+    if (!m_initialized) {
+        qWarning() << "Cannot import data to uninitialized manager";
+        return false;
+    }
+
+    if (m_isProcessing) {
+        qWarning() << "Cannot import data while processing";
+        return false;
+    }
+
+    try {
+        // 导入线段数据
+        if (m_lineDrawingTool && !m_lineDrawingTool->loadFromFile(filename + "_lines.json")) {
+            qWarning() << "Failed to import line data";
+            return false;
+        }
+
+        setStatusMessage("数据导入完成");
+        qDebug() << "Data imported from" << filename;
+        return true;
+
+    } catch (const std::exception& e) {
+        qCritical() << "Exception during data import:" << e.what();
+        emit errorOccurred(QString("导入数据时发生错误: %1").arg(e.what()));
+        return false;
+    }
+}
+
 void WallExtractionManager::handleComponentError(const QString& error)
 {
     QString fullError = QString("Component error: %1").arg(error);
@@ -257,9 +468,38 @@ bool WallExtractionManager::initializeComponents()
 
 void WallExtractionManager::setupConnections()
 {
-    // 这里将来会连接子组件的信号槽
-    // 目前先建立基础框架
-    
+    // 连接线段绘制工具的信号
+    if (m_lineDrawingTool) {
+        connect(m_lineDrawingTool.get(), &LineDrawingTool::errorOccurred,
+                this, &WallExtractionManager::handleComponentError);
+
+        connect(m_lineDrawingTool.get(), &LineDrawingTool::operationCompleted,
+                this, [this](const QString& operation) {
+                    setStatusMessage(QString("线段操作完成: %1").arg(operation));
+                });
+    }
+
+    // 连接墙面拟合算法的信号
+    if (m_wallFittingAlgorithm) {
+        connect(m_wallFittingAlgorithm.get(), &WallFittingAlgorithm::errorOccurred,
+                this, &WallExtractionManager::handleComponentError);
+
+        connect(m_wallFittingAlgorithm.get(), &WallFittingAlgorithm::progressChanged,
+                this, &WallExtractionManager::wallFittingProgress);
+
+        connect(m_wallFittingAlgorithm.get(), &WallFittingAlgorithm::processingStarted,
+                this, &WallExtractionManager::wallFittingStarted);
+
+        connect(m_wallFittingAlgorithm.get(), &WallFittingAlgorithm::processingCompleted,
+                this, [this](const WallFittingResult& result) {
+                    m_lastWallFittingResult = result;
+                    emit wallFittingCompleted(result);
+                });
+
+        connect(m_wallFittingAlgorithm.get(), &WallFittingAlgorithm::processingFailed,
+                this, &WallExtractionManager::wallFittingFailed);
+    }
+
     qDebug() << "Signal-slot connections established";
 }
 

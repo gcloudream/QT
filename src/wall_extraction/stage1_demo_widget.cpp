@@ -5,6 +5,8 @@
 #include "point_cloud_lod_manager.h"
 #include "point_cloud_memory_manager.h"
 #include "spatial_index.h"
+#include "line_drawing_toolbar.h"
+#include "line_property_panel.h"
 #include "las_reader.h"
 #include "point_cloud_processor.h"
 #include "../../pcdreader.h"
@@ -18,6 +20,8 @@
 Stage1DemoWidget::Stage1DemoWidget(QWidget *parent)
     : QWidget(parent)
     , m_mainLayout(nullptr)
+    , m_lineDrawingToolbar(nullptr)
+    , m_linePropertyPanel(nullptr)
     , m_updateTimer(new QTimer(this))
     , m_performanceTimer(new QElapsedTimer())
 {
@@ -28,7 +32,15 @@ Stage1DemoWidget::Stage1DemoWidget(QWidget *parent)
     m_lodManager = std::make_unique<WallExtraction::PointCloudLODManager>(this);
     m_memoryManager = std::make_unique<WallExtraction::PointCloudMemoryManager>(this);
     m_spatialIndex = std::make_unique<WallExtraction::SpatialIndex>(this);
-    
+
+    // 初始化WallExtractionManager（这是关键步骤！）
+    if (!m_wallManager->initialize()) {
+        qCritical() << "Failed to initialize WallExtractionManager";
+        // 继续执行，但阶段二功能将不可用
+    } else {
+        qDebug() << "WallExtractionManager initialized successfully";
+    }
+
     // 设置UI
     setupUI();
 
@@ -400,6 +412,15 @@ void Stage1DemoWidget::createControlPanel()
     // 渲染模式控制区域
     createCompactRenderControl();
     panelLayout->addWidget(m_compactRenderWidget);
+
+    // 线段绘制控制区域
+    createLineDrawingControls();
+    if (m_lineDrawingToolbar) {
+        panelLayout->addWidget(m_lineDrawingToolbar);
+    }
+    if (m_linePropertyPanel) {
+        panelLayout->addWidget(m_linePropertyPanel);
+    }
 
     // 底部弹性空间
     panelLayout->addStretch();
@@ -949,6 +970,49 @@ void Stage1DemoWidget::createCompactRenderControl()
 
     sizeLayout->addStretch();
     renderLayout->addLayout(sizeLayout);
+}
+
+void Stage1DemoWidget::createLineDrawingControls()
+{
+    qDebug() << "Creating line drawing controls...";
+
+    // 确保WallExtractionManager已初始化
+    if (!m_wallManager) {
+        qCritical() << "WallExtractionManager is null -阶段二功能不可用";
+        return;
+    }
+
+    if (!m_wallManager->isInitialized()) {
+        qCritical() << "WallExtractionManager not initialized - 阶段二功能不可用";
+        return;
+    }
+
+    if (!m_wallManager->getLineDrawingTool()) {
+        qCritical() << "LineDrawingTool not available - 阶段二功能不可用";
+        return;
+    }
+
+    qDebug() << "WallExtractionManager and LineDrawingTool are ready";
+
+    try {
+        // 创建线段绘制工具栏
+        m_lineDrawingToolbar = new WallExtraction::LineDrawingToolbar(this);
+        m_lineDrawingToolbar->setLineDrawingTool(m_wallManager->getLineDrawingTool());
+
+        // 创建线段属性面板
+        m_linePropertyPanel = new WallExtraction::LinePropertyPanel(this);
+        m_linePropertyPanel->setLineDrawingTool(m_wallManager->getLineDrawingTool());
+
+        // 初始状态设置为折叠
+        m_linePropertyPanel->hidePanel();
+
+        qDebug() << "Line drawing controls created successfully";
+
+    } catch (const std::exception& e) {
+        qCritical() << "Failed to create line drawing controls:" << e.what();
+        m_lineDrawingToolbar = nullptr;
+        m_linePropertyPanel = nullptr;
+    }
 }
 
 QString Stage1DemoWidget::getResponsiveButtonStyle(const QString& baseColor, bool isPrimary)
@@ -2814,6 +2878,35 @@ void Stage1DemoWidget::connectSignals()
                 this, &Stage1DemoWidget::onPointSizeChanged);
     }
 
+    // 线段绘制控制连接
+    if (m_lineDrawingToolbar) {
+        connect(m_lineDrawingToolbar, &WallExtraction::LineDrawingToolbar::drawingModeChangeRequested,
+                this, &Stage1DemoWidget::onLineDrawingModeChanged);
+        qDebug() << "Line drawing toolbar signals connected";
+    }
+
+    if (m_linePropertyPanel) {
+        connect(m_linePropertyPanel, &WallExtraction::LinePropertyPanel::panelVisibilityChanged,
+                this, [this](bool visible) {
+                    qDebug() << "Line property panel visibility changed:" << visible;
+                });
+        qDebug() << "Line property panel signals connected";
+    }
+
+    // 连接LineDrawingTool的信号
+    if (m_wallManager && m_wallManager->getLineDrawingTool()) {
+        auto* lineDrawingTool = m_wallManager->getLineDrawingTool();
+
+        connect(lineDrawingTool, &WallExtraction::LineDrawingTool::lineSegmentAdded,
+                this, &Stage1DemoWidget::onLineSegmentAdded);
+        connect(lineDrawingTool, &WallExtraction::LineDrawingTool::lineSegmentSelected,
+                this, &Stage1DemoWidget::onLineSegmentSelected);
+        connect(lineDrawingTool, &WallExtraction::LineDrawingTool::lineSegmentRemoved,
+                this, &Stage1DemoWidget::onLineSegmentRemoved);
+
+        qDebug() << "LineDrawingTool signals connected";
+    }
+
     qDebug() << "All signals connected successfully";
 }
 
@@ -2825,6 +2918,47 @@ void Stage1DemoWidget::saveCurrentImage()
     qDebug() << "Saving current image...";
     // 调用现有的保存方法
     saveRenderResult();
+}
+
+// 线段绘制相关槽函数实现
+void Stage1DemoWidget::onLineDrawingModeChanged()
+{
+    qDebug() << "Line drawing mode changed";
+    // 可以在这里添加模式切换的UI反馈
+    if (m_linePropertyPanel && m_linePropertyPanel->isPanelVisible()) {
+        // 如果属性面板可见，更新显示
+        m_linePropertyPanel->update();
+    }
+}
+
+void Stage1DemoWidget::onLineSegmentAdded()
+{
+    qDebug() << "Line segment added";
+    // 可以在这里添加线段添加后的处理逻辑
+    // 例如更新统计信息、刷新显示等
+}
+
+void Stage1DemoWidget::onLineSegmentSelected(int segmentId)
+{
+    qDebug() << "Line segment selected:" << segmentId;
+    // 自动显示属性面板当有线段被选中时
+    if (m_linePropertyPanel && !m_linePropertyPanel->isPanelVisible()) {
+        m_linePropertyPanel->showPanel();
+    }
+}
+
+void Stage1DemoWidget::onLineSegmentRemoved(int segmentId)
+{
+    qDebug() << "Line segment removed:" << segmentId;
+    // 可以在这里添加线段删除后的处理逻辑
+}
+
+void Stage1DemoWidget::toggleLinePropertyPanel()
+{
+    qDebug() << "Toggling line property panel";
+    if (m_linePropertyPanel) {
+        m_linePropertyPanel->togglePanel();
+    }
 }
 
 // 内存使用更新方法已删除
