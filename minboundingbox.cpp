@@ -1,12 +1,13 @@
 // MinBoundingBox.cpp
 #include "MinBoundingBox.h"
+#include <cmath>  // 添加数学函数支持
 
 
 //没有使用过
 
 /* 构造函数：初始化无效距离阈值并重置成员变量 */
 MinBoundingBox::MinBoundingBox(void)
-    : m_finvalidDis(90000.0f)  // 设置默认无效距离阈值(90米)
+    : m_finvalidDis(1e10f)  // 🔧 修复：设置更大的无效距离阈值(100亿米)，支持大坐标系
 {
     zerolize(); // 初始化成员变量
 }
@@ -117,13 +118,19 @@ bool MinBoundingBox::isContain(QVector3D point)
             point.z() <= m_max.z() && point.z() >= m_min.z());
 }
 
-/* 点有效性检查（过滤异常值） */
+/* 点有效性检查（过滤异常值） - 改进版本 */
 bool MinBoundingBox::isValid(QVector3D point)
 {
-    // 三轴坐标绝对值均小于无效距离阈值
-    return !(abs(point.x()) > m_finvalidDis ||
-             abs(point.y()) > m_finvalidDis ||
-             abs(point.z()) > m_finvalidDis);
+    // 检查是否为有限数值（排除NaN和无穷大）
+    if (!std::isfinite(point.x()) || !std::isfinite(point.y()) || !std::isfinite(point.z())) {
+        return false;
+    }
+
+    // 检查坐标绝对值是否在合理范围内
+    // 使用更大的阈值以支持大坐标系统（如UTM坐标系）
+    return !(std::abs(point.x()) > m_finvalidDis ||
+             std::abs(point.y()) > m_finvalidDis ||
+             std::abs(point.z()) > m_finvalidDis);
 }
 
 // // 其他成员函数实现（示例，需根据实际内容补充）

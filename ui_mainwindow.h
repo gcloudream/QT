@@ -23,7 +23,6 @@
 #include <QtWidgets/QTreeView>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
-#include "openglwindow.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -265,7 +264,7 @@ public:
         actionNew->setText(QCoreApplication::translate("MainWindow", "\346\226\260\345\273\272\351\241\271\347\233\256", nullptr));
         actionOpen->setText(QCoreApplication::translate("MainWindow", "\346\211\223\345\274\200\351\241\271\347\233\256", nullptr));
         actionAdd->setText(QCoreApplication::translate("MainWindow", "\346\267\273\345\212\240\346\226\207\344\273\266", nullptr));
-        actionOpen_PLY->setText(QCoreApplication::translate("MainWindow", "\346\211\223\345\274\200PLY\346\226\207\344\273\266", nullptr));
+        actionOpen_PLY->setText(QCoreApplication::translate("MainWindow", "\346\211\223\345\274\200\347\202\271\344\272\221\346\226\207\344\273\266", nullptr));
         actionVectorization_2->setText(QCoreApplication::translate("MainWindow", "\347\237\242\351\207\217\345\214\226", nullptr));
         actionTextureOn->setText(QCoreApplication::translate("MainWindow", "TextureOn", nullptr));
         actionTextureOff->setText(QCoreApplication::translate("MainWindow", "TextureOff", nullptr));

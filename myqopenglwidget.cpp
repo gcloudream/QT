@@ -320,12 +320,50 @@ void MyQOpenglWidget::showPointCloud(const std::vector<QVector3D> &cloud)
 
 void MyQOpenglWidget::initPointCloud(const std::vector<QVector3D> &cloud)
 {
+    qDebug() << "🔧 开始初始化点云，点数：" << cloud.size();
+
     m_PointsVertex.clear();
     m_PointsVertex.resize(cloud.size() + 6);
 
     // 计算原始点云的包围盒
-    m_box.calculateMinBoundingBox(cloud);
+    bool boundingBoxValid = m_box.calculateMinBoundingBox(cloud);
+    if (!boundingBoxValid) {
+        qDebug() << "⚠️  包围盒计算失败，使用默认处理";
+        // 对于包围盒计算失败的情况，直接使用原始坐标
+        addAxisData();
+
+        for(size_t i = 0; i < cloud.size(); ++i) {
+            const auto& p = cloud[i];
+            // 检查点的有效性
+            if (std::isfinite(p.x()) && std::isfinite(p.y()) && std::isfinite(p.z())) {
+                m_PointsVertex[i + 6].pos[0] = p.x();
+                m_PointsVertex[i + 6].pos[1] = p.y();
+                m_PointsVertex[i + 6].pos[2] = p.z();
+                gray2Pseudocolor(p, m_PointsVertex[i + 6].color);
+            } else {
+                // 无效点设为原点
+                m_PointsVertex[i + 6].pos[0] = 0.0f;
+                m_PointsVertex[i + 6].pos[1] = 0.0f;
+                m_PointsVertex[i + 6].pos[2] = 0.0f;
+                m_PointsVertex[i + 6].color[0] = 1.0f; // 红色标记无效点
+                m_PointsVertex[i + 6].color[1] = 0.0f;
+                m_PointsVertex[i + 6].color[2] = 0.0f;
+                m_PointsVertex[i + 6].color[3] = 1.0f;
+            }
+            m_PointsVertex[i+6].normal[0] = 0.0f;
+            m_PointsVertex[i+6].normal[1] = 1.0f;
+            m_PointsVertex[i+6].normal[2] = 0.0f;
+        }
+        qDebug() << "✅ 使用原始坐标完成点云初始化";
+        return;
+    }
+
     QVector3D center = m_box.getCenterPoint();
+    qDebug() << "📊 包围盒信息：";
+    qDebug() << "   最小点：" << m_box.getMinPoint();
+    qDebug() << "   最大点：" << m_box.getMaxPoint();
+    qDebug() << "   中心点：" << center;
+    qDebug() << "   尺寸：" << m_box.width() << "×" << m_box.height() << "×" << m_box.depth();
 
     // 移动点云到原点并重新计算包围盒
     std::vector<QVector3D> movedCloud;
@@ -349,6 +387,8 @@ void MyQOpenglWidget::initPointCloud(const std::vector<QVector3D> &cloud)
         m_PointsVertex[i+6].normal[1] = 1.0f;
         m_PointsVertex[i+6].normal[2] = 0.0f;
     }
+
+    qDebug() << "✅ 点云初始化完成，已移动到原点";
 }
 
 void MyQOpenglWidget::addAxisData()

@@ -6,23 +6,31 @@
 
 /* 主要的PCD文件读取函数 */
 /* 修复后的PCD文件读取函数 */
-/* 完全重写的PCD文件读取函数 - 支持多种压缩格式 */
+/* 完全重写的PCD文件读取函数 - 支持多种压缩格式和大文件处理 */
 std::vector<QVector3D> PCDReader::ReadVec3PointCloudPCD(const QString& filename) {
     std::vector<QVector3D> cloud;
-    QFile file(filename);
 
+    qDebug() << "=== 开始读取PCD文件 ===";
+    qDebug() << "文件路径：" << filename;
+
+    QFile file(filename);
     if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << "无法打开PCD文件：" << filename;
+        qDebug() << "❌ 无法打开PCD文件：" << filename;
+        qDebug() << "错误信息：" << file.errorString();
         return cloud;
     }
+
+    qDebug() << "✅ 文件打开成功，大小：" << file.size() << "字节";
 
     // 解析文件头部
     PCDHeader header = parseHeader(file);
     if (!header.isValid) {
-        qDebug() << "PCD文件头部解析失败";
+        qDebug() << "❌ PCD文件头部解析失败";
         file.close();
         return cloud;
     }
+
+    qDebug() << "✅ 文件头部解析成功";
 
     // 查找坐标字段索引
     int xIndex = -1, yIndex = -1, zIndex = -1;
@@ -34,23 +42,44 @@ std::vector<QVector3D> PCDReader::ReadVec3PointCloudPCD(const QString& filename)
     }
 
     if (xIndex == -1 || yIndex == -1 || zIndex == -1) {
-        qDebug() << "错误：缺少必要的x, y, z坐标字段";
+        qDebug() << "❌ 错误：缺少必要的x, y, z坐标字段";
+        qDebug() << "可用字段：" << header.fields;
         file.close();
         return cloud;
     }
 
+    qDebug() << "✅ 坐标字段索引 - X:" << xIndex << ", Y:" << yIndex << ", Z:" << zIndex;
+
     // 根据数据格式选择相应的读取方法
-    if (header.dataType == "ascii") {
-        cloud = readAsciiData(file, header, xIndex, yIndex, zIndex);
-    } else if (header.dataType == "binary") {
-        cloud = readBinaryData(file, header, xIndex, yIndex, zIndex);
-    } else if (header.dataType == "binary_compressed") {
-        cloud = readBinaryCompressedDataAdvanced(file, header, xIndex, yIndex, zIndex);
-    } else {
-        qDebug() << "错误：未知的数据格式：" << header.dataType;
+    qDebug() << "📊 开始读取数据，格式：" << header.dataType;
+
+    QElapsedTimer timer;
+    timer.start();
+
+    try {
+        if (header.dataType == "ascii") {
+            cloud = readAsciiData(file, header, xIndex, yIndex, zIndex);
+        } else if (header.dataType == "binary") {
+            cloud = readBinaryData(file, header, xIndex, yIndex, zIndex);
+        } else if (header.dataType == "binary_compressed") {
+            cloud = readBinaryCompressedDataAdvanced(file, header, xIndex, yIndex, zIndex);
+        } else {
+            qDebug() << "❌ 错误：未知的数据格式：" << header.dataType;
+        }
+    } catch (const std::exception& e) {
+        qDebug() << "❌ 读取过程中发生异常：" << e.what();
+    } catch (...) {
+        qDebug() << "❌ 读取过程中发生未知异常";
     }
 
+    qint64 elapsed = timer.elapsed();
     file.close();
+
+    qDebug() << "=== PCD文件读取完成 ===";
+    qDebug() << "读取耗时：" << elapsed << "毫秒";
+    qDebug() << "成功读取点数：" << cloud.size() << "/" << header.points;
+    qDebug() << "成功率：" << (header.points > 0 ? (double)cloud.size() / header.points * 100 : 0) << "%";
+
     return cloud;
 }
 
@@ -111,7 +140,41 @@ PCDReader::PCDHeader PCDReader::parseHeader(QFile& file) {
         }
         else if (line.startsWith("DATA")) {
             header.dataType = line.split(' ')[1].toLower();
-            header.dataStartPos = file.pos();
+
+            // 对于二进制格式，需要精确计算数据开始位置
+            if (header.dataType == "binary" || header.dataType == "binary_compressed") {
+                // 保存当前文本流位置
+                qint64 textPos = file.pos();
+
+                // 重新定位到文件开始，逐字节查找"DATA binary"或"DATA binary_compressed"
+                file.seek(0);
+                QByteArray fileContent = file.readAll();
+
+                QString searchPattern = "DATA " + header.dataType;
+                QByteArray searchBytes = searchPattern.toUtf8();
+
+                int dataLinePos = fileContent.indexOf(searchBytes);
+                if (dataLinePos != -1) {
+                    // 找到DATA行，跳过到行尾
+                    int lineEndPos = fileContent.indexOf('\n', dataLinePos);
+                    if (lineEndPos != -1) {
+                        header.dataStartPos = lineEndPos + 1;
+                    } else {
+                        header.dataStartPos = dataLinePos + searchBytes.length();
+                    }
+
+                    qDebug() << "🔍 精确定位数据开始位置：" << header.dataStartPos;
+                    qDebug() << "   DATA行位置：" << dataLinePos;
+                    qDebug() << "   行结束位置：" << lineEndPos;
+                } else {
+                    // 回退到原来的方法
+                    header.dataStartPos = textPos;
+                    qDebug() << "⚠️  无法精确定位，使用文本流位置：" << textPos;
+                }
+            } else {
+                // ASCII格式使用原来的方法
+                header.dataStartPos = file.pos();
+            }
             break;
         }
     }
@@ -519,7 +582,7 @@ std::vector<QVector3D> PCDReader::readAsciiData(QFile& file, const PCDHeader& he
 }
 
 /* 读取Binary格式数据 */
-/* 修复后的读取Binary格式数据函数 */
+/* 修复后的读取Binary格式数据函数 - 优化大文件处理 */
 std::vector<QVector3D> PCDReader::readBinaryData(QFile& file, const PCDHeader& header,
                                                  int xIndex, int yIndex, int zIndex) {
     std::vector<QVector3D> cloud;
@@ -532,6 +595,7 @@ std::vector<QVector3D> PCDReader::readBinaryData(QFile& file, const PCDHeader& h
     }
 
     qDebug() << "Binary格式 - 每个点的字节大小：" << pointSize;
+    qDebug() << "预期点数：" << header.points;
 
     // 计算各字段的偏移量
     int xOffset = calculateOffset(header.sizes, xIndex);
@@ -540,31 +604,140 @@ std::vector<QVector3D> PCDReader::readBinaryData(QFile& file, const PCDHeader& h
 
     qDebug() << "坐标偏移量 - X:" << xOffset << ", Y:" << yOffset << ", Z:" << zOffset;
 
-    int validPoints = 0;
-    for (int i = 0; i < header.points && !file.atEnd(); ++i) {
-        QByteArray pointData = file.read(pointSize);
-        if (pointData.size() != pointSize) {
-            qDebug() << "警告：点" << i << "数据读取不完整，期望：" << pointSize << "，实际：" << pointData.size();
-            break;
-        }
+    // 确保文件指针在正确位置
+    file.seek(header.dataStartPos);
 
-        float x, y, z;
-        memcpy(&x, pointData.data() + xOffset, sizeof(float));
-        memcpy(&y, pointData.data() + yOffset, sizeof(float));
-        memcpy(&z, pointData.data() + zOffset, sizeof(float));
+    // 计算预期的数据大小
+    qint64 expectedDataSize = static_cast<qint64>(header.points) * pointSize;
+    qint64 availableData = file.size() - header.dataStartPos;
 
-        // 调试前10个点
-        if (i < 10) {
-            qDebug() << QString("点%1: X=%2, Y=%3, Z=%4").arg(i).arg(x).arg(y).arg(z);
-        }
+    qDebug() << "预期数据大小：" << expectedDataSize << "字节";
+    qDebug() << "可用数据大小：" << availableData << "字节";
 
-        if (std::isfinite(x) && std::isfinite(y) && std::isfinite(z)) {
-            cloud.push_back(QVector3D(x, y, z));
-            validPoints++;
+    if (availableData < expectedDataSize) {
+        qDebug() << "警告：可用数据不足，可能导致读取不完整";
+    }
+
+    // 🔧 修复：检查数据开始位置是否需要对齐调整
+    qint64 originalDataStart = header.dataStartPos;
+
+    // 读取数据开始位置的前几个字节进行验证
+    QByteArray testBytes = file.read(64);
+    file.seek(header.dataStartPos);
+
+    // 检查是否有额外的填充字节（通常是0x00或0xFF）
+    bool foundValidData = false;
+    qint64 adjustedStart = header.dataStartPos;
+
+    for (int offset = 0; offset < 64 && offset < testBytes.size(); offset += 4) {
+        // 检查是否为合理的浮点数据
+        if (offset + 12 < testBytes.size()) {
+            const float* floatPtr = reinterpret_cast<const float*>(testBytes.data() + offset);
+            float x = floatPtr[0];
+            float y = floatPtr[1];
+            float z = floatPtr[2];
+
+            // 检查坐标值是否在合理范围内（-1000到1000米）
+            if (std::isfinite(x) && std::isfinite(y) && std::isfinite(z) &&
+                std::abs(x) < 1000.0f && std::abs(y) < 1000.0f && std::abs(z) < 1000.0f) {
+                adjustedStart = header.dataStartPos + offset;
+                foundValidData = true;
+                qDebug() << "🎯 找到有效数据起始位置，偏移量：" << offset;
+                qDebug() << "   测试坐标：(" << x << "," << y << "," << z << ")";
+                break;
+            }
         }
     }
 
-    qDebug() << "Binary格式读取完成，有效点数：" << validPoints;
+    if (foundValidData && adjustedStart != originalDataStart) {
+        qDebug() << "📍 调整数据开始位置：" << originalDataStart << " -> " << adjustedStart;
+        file.seek(adjustedStart);
+        availableData = file.size() - adjustedStart;
+    } else {
+        file.seek(header.dataStartPos);
+    }
+
+    // 对于大文件，使用批量读取以提高性能
+    const int BATCH_SIZE = 10000; // 每次读取10000个点
+    int validPoints = 0;
+    int processedPoints = 0;
+
+    // 用于统计坐标范围，帮助诊断问题
+    float minX = std::numeric_limits<float>::max();
+    float maxX = std::numeric_limits<float>::lowest();
+    float minY = std::numeric_limits<float>::max();
+    float maxY = std::numeric_limits<float>::lowest();
+    float minZ = std::numeric_limits<float>::max();
+    float maxZ = std::numeric_limits<float>::lowest();
+
+    while (processedPoints < header.points && !file.atEnd()) {
+        int pointsToRead = qMin(BATCH_SIZE, header.points - processedPoints);
+        qint64 batchSize = static_cast<qint64>(pointsToRead) * pointSize;
+
+        QByteArray batchData = file.read(batchSize);
+        if (batchData.isEmpty()) {
+            qDebug() << "读取到文件末尾，处理的点数：" << processedPoints;
+            break;
+        }
+
+        // 处理批量数据
+        for (int i = 0; i < pointsToRead; ++i) {
+            qint64 offset = static_cast<qint64>(i) * pointSize;
+
+            if (offset + pointSize > batchData.size()) {
+                qDebug() << "批量数据不足，停止处理";
+                break;
+            }
+
+            float x, y, z;
+            memcpy(&x, batchData.data() + offset + xOffset, sizeof(float));
+            memcpy(&y, batchData.data() + offset + yOffset, sizeof(float));
+            memcpy(&z, batchData.data() + offset + zOffset, sizeof(float));
+
+            // 调试前10个点
+            if (processedPoints + i < 10) {
+                qDebug() << QString("点%1: X=%2, Y=%3, Z=%4").arg(processedPoints + i).arg(x).arg(y).arg(z);
+            }
+
+            // 🔧 修复：更严格的坐标验证，过滤异常值
+            if (std::isfinite(x) && std::isfinite(y) && std::isfinite(z) &&
+                std::abs(x) < 1e6f && std::abs(y) < 1e6f && std::abs(z) < 1e6f) {  // 限制在合理范围内
+                cloud.push_back(QVector3D(x, y, z));
+                validPoints++;
+
+                // 更新坐标范围统计
+                minX = std::min(minX, x);
+                maxX = std::max(maxX, x);
+                minY = std::min(minY, y);
+                maxY = std::max(maxY, y);
+                minZ = std::min(minZ, z);
+                maxZ = std::max(maxZ, z);
+            }
+        }
+
+        processedPoints += pointsToRead;
+
+        // 每处理100000个点输出一次进度
+        if (processedPoints % 100000 == 0) {
+            qDebug() << "已处理点数：" << processedPoints << "/" << header.points
+                     << "，有效点数：" << validPoints;
+        }
+    }
+
+    qDebug() << "Binary格式读取完成，总处理点数：" << processedPoints
+             << "，有效点数：" << validPoints;
+
+    // 输出最终的坐标范围统计
+    if (validPoints > 0) {
+        qDebug() << "📊 坐标范围统计：";
+        qDebug() << QString("   X: [%1, %2] (范围: %3)")
+                        .arg(minX, 0, 'f', 3).arg(maxX, 0, 'f', 3).arg(maxX - minX, 0, 'f', 3);
+        qDebug() << QString("   Y: [%1, %2] (范围: %3)")
+                        .arg(minY, 0, 'f', 3).arg(maxY, 0, 'f', 3).arg(maxY - minY, 0, 'f', 3);
+        qDebug() << QString("   Z: [%1, %2] (范围: %3)")
+                        .arg(minZ, 0, 'f', 3).arg(maxZ, 0, 'f', 3).arg(maxZ - minZ, 0, 'f', 3);
+    }
+
     return cloud;
 }
 

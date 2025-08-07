@@ -1246,6 +1246,38 @@ void MainWindow::PointCloud()
     // 显示点云并测量耗时
     QTime startTime = QTime::currentTime();
     m_currentCloud = cloud; // 保存当前点云数据
+
+    // 检查点云数据的坐标范围
+    if (!cloud.empty()) {
+        float minX = cloud[0].x(), maxX = cloud[0].x();
+        float minY = cloud[0].y(), maxY = cloud[0].y();
+        float minZ = cloud[0].z(), maxZ = cloud[0].z();
+
+        for (size_t i = 1; i < std::min(cloud.size(), size_t(1000)); ++i) { // 只检查前1000个点
+            const auto& p = cloud[i];
+            if (std::isfinite(p.x()) && std::isfinite(p.y()) && std::isfinite(p.z())) {
+                minX = std::min(minX, p.x()); maxX = std::max(maxX, p.x());
+                minY = std::min(minY, p.y()); maxY = std::max(maxY, p.y());
+                minZ = std::min(minZ, p.z()); maxZ = std::max(maxZ, p.z());
+            }
+        }
+
+        qDebug() << "📊 点云坐标范围预览：";
+        qDebug() << "   X: [" << minX << ", " << maxX << "]";
+        qDebug() << "   Y: [" << minY << ", " << maxY << "]";
+        qDebug() << "   Z: [" << minZ << ", " << maxZ << "]";
+
+        // 检查是否为大坐标系统
+        float maxRange = std::max({std::abs(minX), std::abs(maxX), std::abs(minY),
+                                  std::abs(maxY), std::abs(minZ), std::abs(maxZ)});
+        if (maxRange > 100000.0f) {
+            qDebug() << "⚠️  检测到大坐标系统，最大坐标值：" << maxRange;
+            QMessageBox::information(this, "大坐标系统",
+                QString("检测到大坐标系统（最大坐标值：%1）\n"
+                       "系统将自动处理坐标转换以确保正常显示。").arg(maxRange, 0, 'e', 2));
+        }
+    }
+
     m_pOpenglWidget->showPointCloud(cloud);
     qDebug() << "点云加载耗时：" << startTime.msecsTo(QTime::currentTime()) << "ms";
     qDebug() << "成功加载点云，共" << cloud.size() << "个点";
@@ -1378,9 +1410,9 @@ void MainWindow::PointCloud2()
     }
 
     QString extension = fileInfo.suffix().toLower();
-    if (extension != "ply" && extension != "txt") {
+    if (extension != "ply" && extension != "txt" && extension != "pcd") {
         QMessageBox::warning(this, "格式错误",
-                             QString("仅支持PLY和TXT文件，当前文件类型: .%1").arg(fileInfo.suffix()));
+                             QString("仅支持PLY、TXT和PCD文件，当前文件类型: .%1").arg(fileInfo.suffix()));
         return;
     }
 
@@ -1391,6 +1423,9 @@ void MainWindow::PointCloud2()
     }
     else if (extension == "txt") {
         cloud = ReadVec3PointCloudTXT(filePath);
+    }
+    else if (extension == "pcd") {
+        cloud = ReadVec3PointCloudPCD(filePath);
     }
 
     if (cloud.empty()) {

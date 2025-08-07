@@ -45,7 +45,7 @@
      <attribute name="title">
       <string>3D显示</string>
      </attribute>
-     <widget class="QWidget" name="displayControlWidget">
+     <widget class="QWidget" name="displayControlWidget" native="true">
       <property name="geometry">
        <rect>
         <x>30</x>
@@ -269,7 +269,7 @@
   </action>
   <action name="actionOpen_PLY">
    <property name="text">
-    <string>打开PLY文件</string>
+    <string>打开点云文件</string>
    </property>
   </action>
   <action name="actionVectorization_2">
@@ -378,14 +378,6 @@
    </property>
   </action>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>OpenglWindow</class>
-   <extends>QWidget</extends>
-   <header>openglwindow.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
