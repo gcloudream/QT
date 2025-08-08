@@ -92,7 +92,7 @@ private:
     LineDrawingTool* m_lineDrawingTool;
     
     // 主布局
-    QHBoxLayout* m_mainLayout;
+    QVBoxLayout* m_mainLayout;
     
     // 绘制模式组
     QGroupBox* m_drawingModeGroup;

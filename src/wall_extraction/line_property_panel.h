@@ -116,9 +116,6 @@ private:
     
     // 动画效果
     QPropertyAnimation* m_toggleAnimation;
-    QGraphicsOpacityEffect* m_opacityEffect;
-    QPropertyAnimation* m_opacityAnimation;
-    QParallelAnimationGroup* m_animationGroup;
     
     // 状态变量
     bool m_isVisible;

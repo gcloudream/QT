@@ -59,33 +59,22 @@ void LineDrawingToolbar::setupUI()
     // 设置主工具栏样式
     setObjectName("LineDrawingToolbar");
     setStyleSheet(getModernToolbarStyle());
-    setMinimumHeight(120);  // 大幅增加最小高度以容纳更大的按钮
+    setMinimumHeight(150);  // 减少高度，因为移除了标题
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    // 使用垂直布局来更好地组织内容
-    QVBoxLayout* mainVerticalLayout = new QVBoxLayout(this);
-    mainVerticalLayout->setContentsMargins(20, 16, 20, 16);  // 增加边距
-    mainVerticalLayout->setSpacing(12);  // 增加间距
+    // 使用垂直布局来组织所有内容
+    m_mainLayout = new QVBoxLayout(this);
+    m_mainLayout->setContentsMargins(12, 8, 12, 8);  // 进一步减少边距
+    m_mainLayout->setSpacing(6);  // 减少间距，使布局更紧凑
 
-    // 创建工具栏标题
-    QLabel* toolbarTitle = createStyledLabel("线段绘制工具", "toolbar-title");
-    mainVerticalLayout->addWidget(toolbarTitle);
-
-    // 创建主要工具区域
-    QWidget* toolsArea = new QWidget();
-    m_mainLayout = new QHBoxLayout(toolsArea);
-    m_mainLayout->setContentsMargins(0, 0, 0, 0);
-    m_mainLayout->setSpacing(24);  // 大幅增加组件间距
-
+    // 移除标题，直接排列所有组件
     setupDrawingModeGroup();
     setupEditModeGroup();
     setupToolsGroup();
     setupStatusGroup();
 
-    // 添加弹性空间
-    m_mainLayout->addStretch();
-
-    mainVerticalLayout->addWidget(toolsArea);
+    // 添加少量弹性空间
+    m_mainLayout->addStretch(1);
 }
 
 void LineDrawingToolbar::setupDrawingModeGroup()
@@ -93,48 +82,48 @@ void LineDrawingToolbar::setupDrawingModeGroup()
     m_drawingModeGroup = new QGroupBox("绘制模式", this);
     m_drawingModeGroup->setObjectName("DrawingModeGroup");
     m_drawingModeGroup->setStyleSheet(getModernGroupBoxStyle());
-    m_drawingModeGroup->setMinimumWidth(500);  // 增加宽度以容纳更大的按钮
+    m_drawingModeGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    // 改为水平布局，单行排列，避免拥挤
+    // 改为水平布局，单行排列
     QHBoxLayout* layout = new QHBoxLayout(m_drawingModeGroup);
-    layout->setContentsMargins(16, 20, 16, 16);  // 增加边距
-    layout->setSpacing(12);  // 增加按钮间距
+    layout->setContentsMargins(8, 12, 8, 8);  // 减少边距
+    layout->setSpacing(4);  // 减少按钮间距
 
     m_drawingModeButtonGroup = new QButtonGroup(this);
 
-    // 创建按钮并设置现代化样式，大幅增加按钮尺寸确保文字完全可见
-    m_noneButton = createStyledButton("无", "mode-button xlarge");
+    // 创建按钮并设置适合水平排列的尺寸
+    m_noneButton = createStyledButton("无", "mode-button compact");
     m_noneButton->setCheckable(true);
     m_noneButton->setChecked(true);
-    m_noneButton->setMinimumSize(80, 40);  // 大幅增加尺寸
-    m_noneButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_noneButton->setMinimumSize(40, 28);  // 适合水平排列的尺寸
+    m_noneButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_drawingModeButtonGroup->addButton(m_noneButton, static_cast<int>(DrawingMode::None));
 
-    m_singleLineButton = createStyledButton("单线段", "mode-button xlarge");
+    m_singleLineButton = createStyledButton("单线段", "mode-button compact");
     m_singleLineButton->setCheckable(true);
-    m_singleLineButton->setMinimumSize(80, 40);
-    m_singleLineButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_singleLineButton->setMinimumSize(60, 28);  // 3个字需要稍宽
+    m_singleLineButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_drawingModeButtonGroup->addButton(m_singleLineButton, static_cast<int>(DrawingMode::SingleLine));
 
-    m_polylineButton = createStyledButton("多段线", "mode-button xlarge");
+    m_polylineButton = createStyledButton("多段线", "mode-button compact");
     m_polylineButton->setCheckable(true);
-    m_polylineButton->setMinimumSize(80, 40);
-    m_polylineButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_polylineButton->setMinimumSize(60, 28);
+    m_polylineButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_drawingModeButtonGroup->addButton(m_polylineButton, static_cast<int>(DrawingMode::Polyline));
 
-    m_selectionButton = createStyledButton("选择", "mode-button xlarge");
+    m_selectionButton = createStyledButton("选择", "mode-button compact");
     m_selectionButton->setCheckable(true);
-    m_selectionButton->setMinimumSize(80, 40);
-    m_selectionButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_selectionButton->setMinimumSize(40, 28);
+    m_selectionButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_drawingModeButtonGroup->addButton(m_selectionButton, static_cast<int>(DrawingMode::Selection));
 
-    m_editButton = createStyledButton("编辑", "mode-button xlarge");
+    m_editButton = createStyledButton("编辑", "mode-button compact");
     m_editButton->setCheckable(true);
-    m_editButton->setMinimumSize(80, 40);
-    m_editButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_editButton->setMinimumSize(40, 28);
+    m_editButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_drawingModeButtonGroup->addButton(m_editButton, static_cast<int>(DrawingMode::Edit));
 
-    // 水平排列所有按钮，确保有足够空间
+    // 水平排列所有按钮
     layout->addWidget(m_noneButton);
     layout->addWidget(m_singleLineButton);
     layout->addWidget(m_polylineButton);
@@ -149,37 +138,38 @@ void LineDrawingToolbar::setupEditModeGroup()
     m_editModeGroup = new QGroupBox("编辑模式", this);
     m_editModeGroup->setObjectName("EditModeGroup");
     m_editModeGroup->setStyleSheet(getModernGroupBoxStyle());
+    m_editModeGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    m_editModeGroup->setMinimumWidth(350);  // 增加宽度
-
+    // 改为水平布局，单行排列
     QHBoxLayout* layout = new QHBoxLayout(m_editModeGroup);
-    layout->setContentsMargins(16, 20, 16, 16);  // 增加边距
-    layout->setSpacing(12);  // 增加间距
+    layout->setContentsMargins(8, 12, 8, 8);  // 减少边距
+    layout->setSpacing(4);  // 减少间距
 
     m_editModeButtonGroup = new QButtonGroup(this);
 
-    m_moveEndpointButton = createStyledButton("移动端点", "edit-button xlarge");
+    m_moveEndpointButton = createStyledButton("移动端点", "edit-button compact");
     m_moveEndpointButton->setCheckable(true);
     m_moveEndpointButton->setChecked(true);
-    m_moveEndpointButton->setMinimumSize(90, 40);  // 4个字需要更宽
-    m_moveEndpointButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_moveEndpointButton->setMinimumSize(70, 28);  // 4个字适合水平排列
+    m_moveEndpointButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_editModeButtonGroup->addButton(m_moveEndpointButton, static_cast<int>(EditMode::MoveEndpoint));
 
-    m_splitSegmentButton = createStyledButton("分割线段", "edit-button xlarge");
+    m_splitSegmentButton = createStyledButton("分割线段", "edit-button compact");
     m_splitSegmentButton->setCheckable(true);
-    m_splitSegmentButton->setMinimumSize(90, 40);
-    m_splitSegmentButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_splitSegmentButton->setMinimumSize(70, 28);
+    m_splitSegmentButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_editModeButtonGroup->addButton(m_splitSegmentButton, static_cast<int>(EditMode::SplitSegment));
 
-    m_mergeSegmentsButton = createStyledButton("合并线段", "edit-button xlarge");
+    m_mergeSegmentsButton = createStyledButton("合并线段", "edit-button compact");
     m_mergeSegmentsButton->setCheckable(true);
-    m_mergeSegmentsButton->setMinimumSize(90, 40);
-    m_mergeSegmentsButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_mergeSegmentsButton->setMinimumSize(70, 28);
+    m_mergeSegmentsButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_editModeButtonGroup->addButton(m_mergeSegmentsButton, static_cast<int>(EditMode::MergeSegments));
 
     layout->addWidget(m_moveEndpointButton);
     layout->addWidget(m_splitSegmentButton);
     layout->addWidget(m_mergeSegmentsButton);
+    layout->addStretch();
 
     // 默认禁用编辑模式组
     m_editModeGroup->setEnabled(false);
@@ -192,29 +182,29 @@ void LineDrawingToolbar::setupToolsGroup()
     m_toolsGroup = new QGroupBox("操作工具", this);
     m_toolsGroup->setObjectName("ToolsGroup");
     m_toolsGroup->setStyleSheet(getModernGroupBoxStyle());
-    m_toolsGroup->setMinimumWidth(350);  // 增加宽度
+    m_toolsGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    // 改为水平布局，单行排列所有工具按钮
+    // 改为水平布局，单行排列
     QHBoxLayout* layout = new QHBoxLayout(m_toolsGroup);
-    layout->setContentsMargins(16, 20, 16, 16);  // 增加边距
-    layout->setSpacing(12);  // 增加按钮间距
+    layout->setContentsMargins(8, 12, 8, 8);  // 减少边距
+    layout->setSpacing(4);  // 减少按钮间距
 
-    // 创建更大的按钮，确保文字完全可见
-    m_saveButton = createStyledButton("保存", "tool-button success xlarge");
-    m_saveButton->setMinimumSize(80, 40);
-    m_saveButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    // 创建适合水平排列的按钮
+    m_saveButton = createStyledButton("保存", "tool-button success compact");
+    m_saveButton->setMinimumSize(50, 28);
+    m_saveButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-    m_loadButton = createStyledButton("加载", "tool-button primary xlarge");
-    m_loadButton->setMinimumSize(80, 40);
-    m_loadButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_loadButton = createStyledButton("加载", "tool-button primary compact");
+    m_loadButton->setMinimumSize(50, 28);
+    m_loadButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-    m_deleteSelectedButton = createStyledButton("删除选中", "tool-button warning xlarge");
-    m_deleteSelectedButton->setMinimumSize(90, 40);  // 稍微更宽以容纳4个字
-    m_deleteSelectedButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_deleteSelectedButton = createStyledButton("删除选中", "tool-button warning compact");
+    m_deleteSelectedButton->setMinimumSize(70, 28);  // 4个字适合水平排列
+    m_deleteSelectedButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-    m_clearAllButton = createStyledButton("清空所有", "tool-button danger xlarge");
-    m_clearAllButton->setMinimumSize(90, 40);
-    m_clearAllButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_clearAllButton = createStyledButton("清空所有", "tool-button danger compact");
+    m_clearAllButton->setMinimumSize(70, 28);
+    m_clearAllButton->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     // 水平排列所有按钮
     layout->addWidget(m_saveButton);
@@ -230,34 +220,36 @@ void LineDrawingToolbar::setupStatusGroup()
     m_statusGroup = new QGroupBox("状态信息", this);
     m_statusGroup->setObjectName("StatusGroup");
     m_statusGroup->setStyleSheet(getModernGroupBoxStyle());
-    m_statusGroup->setMinimumWidth(180);  // 增加宽度
+    m_statusGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     QVBoxLayout* layout = new QVBoxLayout(m_statusGroup);
-    layout->setContentsMargins(16, 20, 16, 16);  // 增加边距
-    layout->setSpacing(10);  // 增加间距
+    layout->setContentsMargins(8, 12, 8, 8);  // 减少边距
+    layout->setSpacing(4);  // 减少间距
 
-    // 创建状态信息容器，使用更大的尺寸
+    // 创建状态信息容器，使用紧凑尺寸
     QWidget* statusContainer = new QWidget();
     statusContainer->setStyleSheet(R"(
         QWidget {
             background-color: #f8f9fa;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            padding: 12px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 6px;
         }
     )");
 
-    QVBoxLayout* statusLayout = new QVBoxLayout(statusContainer);
-    statusLayout->setContentsMargins(12, 12, 12, 12);  // 增加内边距
-    statusLayout->setSpacing(8);  // 增加间距
+    // 改为水平布局，单行排列状态信息
+    QHBoxLayout* statusLayout = new QHBoxLayout(statusContainer);
+    statusLayout->setContentsMargins(6, 6, 6, 6);  // 减少内边距
+    statusLayout->setSpacing(12);  // 状态项之间的间距
 
-    m_segmentCountLabel = createStyledLabel("线段数: 0", "status-label xlarge");
-    m_selectedCountLabel = createStyledLabel("选中数: 0", "status-label xlarge");
-    m_currentModeLabel = createStyledLabel("模式: 无", "status-label xlarge");
+    m_segmentCountLabel = createStyledLabel("线段数: 0", "status-label compact");
+    m_selectedCountLabel = createStyledLabel("选中数: 0", "status-label compact");
+    m_currentModeLabel = createStyledLabel("模式: 无", "status-label compact");
 
     statusLayout->addWidget(m_segmentCountLabel);
     statusLayout->addWidget(m_selectedCountLabel);
     statusLayout->addWidget(m_currentModeLabel);
+    statusLayout->addStretch();  // 添加弹性空间
 
     layout->addWidget(statusContainer);
 
@@ -539,6 +531,11 @@ QPushButton* LineDrawingToolbar::createStyledButton(const QString& text, const Q
         padding = "8px 16px";
         minWidth = "80px";
         minHeight = "32px";
+    } else if (styleClass.contains("compact")) {
+        fontSize = "12px";      // 紧凑但清晰的字体
+        padding = "6px 10px";   // 紧凑的内边距
+        minWidth = "50px";      // 最小宽度
+        minHeight = "28px";     // 适中的高度
     } else {
         fontSize = "11px";
         padding = "6px 12px";
@@ -652,6 +649,10 @@ QLabel* LineDrawingToolbar::createStyledLabel(const QString& text, const QString
         fontSize = "12px";
         fontWeight = "500";
         padding = "4px 6px";
+    } else if (styleClass.contains("compact")) {
+        fontSize = "11px";      // 紧凑但清晰的字体
+        fontWeight = "500";     // 适中的字体粗细
+        padding = "3px 5px";    // 紧凑的内边距
     } else {
         fontSize = "11px";
         fontWeight = "500";

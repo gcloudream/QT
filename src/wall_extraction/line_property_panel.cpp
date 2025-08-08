@@ -17,10 +17,7 @@ LinePropertyPanel::LinePropertyPanel(QWidget* parent)
     , m_infoPanel(nullptr)
     , m_listWidget(nullptr)
     , m_toggleAnimation(nullptr)
-    , m_opacityEffect(nullptr)
-    , m_opacityAnimation(nullptr)
-    , m_animationGroup(nullptr)
-    , m_isVisible(true)
+    , m_isVisible(false)
     , m_isAnimating(false)
     , m_collapsedSize(300, 40)
     , m_expandedSize(300, 600)
@@ -29,10 +26,15 @@ LinePropertyPanel::LinePropertyPanel(QWidget* parent)
     setupUI();
     setupAnimations();
     connectSignals();
-    
-    // 设置默认大小
+
+    // 设置默认大小和高度限制
     resize(m_expandedSize);
     setMinimumSize(m_collapsedSize);
+
+    // 默认隐藏状态
+    m_isVisible = false;
+    setMaximumHeight(m_collapsedSize.height());
+    m_contentWidget->hide();
 }
 
 LinePropertyPanel::~LinePropertyPanel()
@@ -97,9 +99,9 @@ void LinePropertyPanel::setupHeaderWidget()
     m_headerLayout->setContentsMargins(16, 8, 16, 8);  // 增加边距
     m_headerLayout->setSpacing(16);  // 增加间距
 
-    m_titleLabel = createStyledLabel("线段属性", "title-label xlarge");
-    m_toggleButton = createStyledButton("折叠", "toggle-button xlarge");
-    m_toggleButton->setFixedSize(80, 32);  // 大幅增加按钮尺寸
+    m_titleLabel = createStyledLabel("线段属性", "title-label compact");
+    m_toggleButton = createStyledButton("折叠", "toggle-button compact");
+    m_toggleButton->setFixedSize(60, 26);  // 紧凑尺寸
     
     m_headerLayout->addWidget(m_titleLabel);
     m_headerLayout->addStretch();
@@ -142,31 +144,22 @@ void LinePropertyPanel::setupContentWidget()
 
 void LinePropertyPanel::setupAnimations()
 {
-    // 设置透明度效果
-    m_opacityEffect = new QGraphicsOpacityEffect(this);
-    m_contentWidget->setGraphicsEffect(m_opacityEffect);
-    
-    // 创建大小动画
-    m_toggleAnimation = new QPropertyAnimation(this, "size", this);
+    // 创建高度动画，类似于Stage1DemoWidget中的渲染参数折叠功能
+    m_toggleAnimation = new QPropertyAnimation(this, "maximumHeight", this);
     m_toggleAnimation->setDuration(300);
     m_toggleAnimation->setEasingCurve(QEasingCurve::InOutQuad);
-    
-    // 创建透明度动画
-    m_opacityAnimation = new QPropertyAnimation(m_opacityEffect, "opacity", this);
-    m_opacityAnimation->setDuration(300);
-    m_opacityAnimation->setEasingCurve(QEasingCurve::InOutQuad);
-    
-    // 创建并行动画组
-    m_animationGroup = new QParallelAnimationGroup(this);
-    m_animationGroup->addAnimation(m_toggleAnimation);
-    m_animationGroup->addAnimation(m_opacityAnimation);
-    
+
     // 连接动画完成信号
-    connect(m_animationGroup, &QParallelAnimationGroup::finished,
+    connect(m_toggleAnimation, &QPropertyAnimation::finished,
             this, [this]() {
                 m_isAnimating = false;
                 if (!m_isVisible) {
+                    // 隐藏时设置最小高度并隐藏内容
+                    setMaximumHeight(m_collapsedSize.height());
                     m_contentWidget->hide();
+                } else {
+                    // 显示时允许自由调整大小
+                    setMaximumHeight(QWIDGETSIZE_MAX);
                 }
             });
 }
@@ -331,22 +324,27 @@ void LinePropertyPanel::animateToggle(bool show)
 
     m_isAnimating = true;
 
-    QSize startSize = size();
-    QSize endSize = show ? m_expandedSize : m_collapsedSize;
+    if (show) {
+        // 显示：先显示内容，然后展开高度
+        m_contentWidget->show();
+        setMaximumHeight(m_expandedSize.height());
 
-    // 设置大小动画
-    m_toggleAnimation->setStartValue(startSize);
-    m_toggleAnimation->setEndValue(endSize);
+        int currentHeight = height();
+        int targetHeight = m_expandedSize.height();
 
-    // 设置透明度动画
-    float startOpacity = show ? 0.0f : 1.0f;
-    float endOpacity = show ? 1.0f : 0.0f;
+        m_toggleAnimation->setStartValue(currentHeight);
+        m_toggleAnimation->setEndValue(targetHeight);
+    } else {
+        // 隐藏：收起高度
+        int currentHeight = height();
+        int targetHeight = m_collapsedSize.height();
 
-    m_opacityAnimation->setStartValue(startOpacity);
-    m_opacityAnimation->setEndValue(endOpacity);
+        m_toggleAnimation->setStartValue(currentHeight);
+        m_toggleAnimation->setEndValue(targetHeight);
+    }
 
     // 启动动画
-    m_animationGroup->start();
+    m_toggleAnimation->start();
 }
 
 // ==================== 现代化样式方法 ====================
@@ -387,6 +385,10 @@ QPushButton* LinePropertyPanel::createStyledButton(const QString& text, const QS
         fontSize = "12px";
         padding = "6px 12px";
         minHeight = "28px";
+    } else if (styleClass.contains("compact")) {
+        fontSize = "12px";      // 紧凑但清晰的字体，适合中文显示
+        padding = "5px 10px";   // 紧凑的内边距
+        minHeight = "26px";     // 适中的高度
     } else {
         fontSize = "11px";
         padding = "4px 8px";

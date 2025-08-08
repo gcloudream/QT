@@ -20,6 +20,7 @@
 #include <QResizeEvent>
 #include <QShowEvent>
 #include <QFrame>
+#include <QPropertyAnimation>
 #include <memory>
 
 // 前向声明
@@ -31,7 +32,6 @@ namespace WallExtraction {
     class PointCloudMemoryManager;
     class SpatialIndex;
     class LineDrawingToolbar;
-    class LinePropertyPanel;
     enum class ColorScheme;
     enum class TopDownRenderMode;
     struct PointWithAttributes;
@@ -90,7 +90,12 @@ private slots:
     void onLineSegmentAdded();
     void onLineSegmentSelected(int segmentId);
     void onLineSegmentRemoved(int segmentId);
-    void toggleLinePropertyPanel();
+
+    // 渲染参数控制
+    void toggleRenderParams();
+
+    // 线框绘制工具控制
+    void toggleLineDrawingTools();
 
     // 实时更新
     void updateRenderView();
@@ -112,6 +117,19 @@ private:
     void createCompactColorControl();
     void createCompactRenderControl();
     void createLineDrawingControls();
+
+    // 渲染参数折叠功能方法
+    void createRenderParamsToggleButton();
+    void createRenderParamsContainer();
+    int calculateRenderParamsHeight();
+    void syncRenderParamsButtonState();
+
+    // 线框绘制工具折叠功能方法
+    void createLineDrawingToggleButton();
+    void createLineDrawingContainer();
+    int calculateLineDrawingHeight();
+    void syncLineDrawingButtonState();
+    void addLineDrawingControlsToContainer();
 
     // 响应式样式管理
     QString getResponsiveButtonStyle(const QString& baseColor, bool isPrimary = false);
@@ -172,7 +190,6 @@ private:
 
     // 线段绘制UI组件
     WallExtraction::LineDrawingToolbar* m_lineDrawingToolbar;
-    WallExtraction::LinePropertyPanel* m_linePropertyPanel;
     
     // 控制组
     QGroupBox* m_fileControlGroup;
@@ -208,7 +225,19 @@ private:
     
     // 显示区域
     QLabel* m_renderDisplayLabel;
-    
+
+    // 渲染参数折叠控制
+    QPushButton* m_toggleRenderParamsButton;
+    QWidget* m_renderParamsContainer;
+    QPropertyAnimation* m_renderParamsAnimation;
+    bool m_renderParamsVisible;
+
+    // 线框绘制工具折叠控制
+    QPushButton* m_toggleLineDrawingButton;
+    QWidget* m_lineDrawingContainer;
+    QPropertyAnimation* m_lineDrawingAnimation;
+    bool m_lineDrawingVisible;
+
     // 状态标签已删除
     
     // 核心组件

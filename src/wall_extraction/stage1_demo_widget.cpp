@@ -6,7 +6,6 @@
 #include "point_cloud_memory_manager.h"
 #include "spatial_index.h"
 #include "line_drawing_toolbar.h"
-#include "line_property_panel.h"
 #include "las_reader.h"
 #include "point_cloud_processor.h"
 #include "../../pcdreader.h"
@@ -15,13 +14,23 @@
 #include <QApplication>
 #include <QPixmap>
 #include <QtMath>
+#include <QPropertyAnimation>
+#include <QEasingCurve>
+#include <QAbstractAnimation>
 #include <cmath>
 
 Stage1DemoWidget::Stage1DemoWidget(QWidget *parent)
     : QWidget(parent)
     , m_mainLayout(nullptr)
     , m_lineDrawingToolbar(nullptr)
-    , m_linePropertyPanel(nullptr)
+    , m_toggleRenderParamsButton(nullptr)
+    , m_renderParamsContainer(nullptr)
+    , m_renderParamsAnimation(nullptr)
+    , m_renderParamsVisible(false)
+    , m_toggleLineDrawingButton(nullptr)
+    , m_lineDrawingContainer(nullptr)
+    , m_lineDrawingAnimation(nullptr)
+    , m_lineDrawingVisible(false)
     , m_updateTimer(new QTimer(this))
     , m_performanceTimer(new QElapsedTimer())
 {
@@ -71,6 +80,502 @@ Stage1DemoWidget::Stage1DemoWidget(QWidget *parent)
 Stage1DemoWidget::~Stage1DemoWidget()
 {
     qDebug() << "Stage1DemoWidget destroyed";
+}
+
+// ==================== 渲染参数折叠功能实现 ====================
+
+void Stage1DemoWidget::createRenderParamsToggleButton()
+{
+    m_toggleRenderParamsButton = new QPushButton("渲染参数", this);
+    m_toggleRenderParamsButton->setCheckable(true);
+    m_toggleRenderParamsButton->setChecked(false);  // 默认隐藏
+    m_toggleRenderParamsButton->setStyleSheet(
+        "QPushButton {"
+        "   padding: 12px 20px;"
+        "   font-size: 14px;"
+        "   font-weight: 600;"
+        "   background-color: #3498db;"
+        "   color: white;"
+        "   border: none;"
+        "   border-radius: 6px;"
+        "   min-height: 20px;"
+        "}"
+        "QPushButton:hover {"
+        "   background-color: #2980b9;"
+        "}"
+        "QPushButton:pressed {"
+        "   background-color: #21618c;"
+        "}"
+        "QPushButton:checked {"
+        "   background-color: #e74c3c;"
+        "}"
+        "QPushButton:checked:hover {"
+        "   background-color: #c0392b;"
+        "}"
+    );
+
+    // 连接信号 - 使用clicked信号，并在槽函数中处理状态
+    connect(m_toggleRenderParamsButton, &QPushButton::clicked,
+            this, [this](bool checked) {
+                qDebug() << "Button clicked, checked state:" << checked;
+                qDebug() << "Current m_renderParamsVisible:" << m_renderParamsVisible;
+
+                // 重置按钮状态为当前逻辑状态，避免状态不一致
+                m_toggleRenderParamsButton->setChecked(m_renderParamsVisible);
+
+                // 调用切换方法
+                toggleRenderParams();
+            });
+
+    qDebug() << "Render params toggle button created with initial state:"
+             << m_toggleRenderParamsButton->isChecked();
+}
+
+void Stage1DemoWidget::createRenderParamsContainer()
+{
+    m_renderParamsContainer = new QWidget(this);
+    m_renderParamsContainer->setStyleSheet(
+        "QWidget {"
+        "   background-color: #f8f9fa;"
+        "   border: 2px solid #dee2e6;"
+        "   border-radius: 8px;"
+        "   padding: 4px;"
+        "}"
+    );
+
+    QVBoxLayout* containerLayout = new QVBoxLayout(m_renderParamsContainer);
+    containerLayout->setContentsMargins(8, 8, 8, 8);
+    containerLayout->setSpacing(12);
+
+    // 添加标题
+    QLabel* titleLabel = new QLabel("渲染参数设置");
+    titleLabel->setStyleSheet(
+        "QLabel {"
+        "   font-weight: bold;"
+        "   font-size: 15px;"
+        "   color: #212529;"
+        "   padding: 8px 0;"
+        "   border-bottom: 2px solid #e9ecef;"
+        "   margin-bottom: 8px;"
+        "}"
+    );
+    containerLayout->addWidget(titleLabel);
+
+    // LOD控制区域
+    createCompactLODControl();
+    containerLayout->addWidget(m_compactLODWidget);
+
+    // 颜色映射控制区域
+    createCompactColorControl();
+    containerLayout->addWidget(m_compactColorWidget);
+
+    // 渲染模式控制区域
+    createCompactRenderControl();
+    containerLayout->addWidget(m_compactRenderWidget);
+
+    // 创建动画
+    m_renderParamsAnimation = new QPropertyAnimation(m_renderParamsContainer, "maximumHeight", this);
+    m_renderParamsAnimation->setDuration(300);  // 300ms动画
+    m_renderParamsAnimation->setEasingCurve(QEasingCurve::InOutQuad);
+
+    // 默认隐藏
+    m_renderParamsContainer->setMaximumHeight(0);
+    m_renderParamsContainer->hide();
+    m_renderParamsVisible = false;
+}
+
+void Stage1DemoWidget::toggleRenderParams()
+{
+    // 防止动画进行中的重复点击
+    if (m_renderParamsAnimation->state() == QAbstractAnimation::Running) {
+        qDebug() << "Animation is running, ignoring click";
+        return;
+    }
+
+    qDebug() << "=== toggleRenderParams called ===";
+    qDebug() << "Current state - m_renderParamsVisible:" << m_renderParamsVisible;
+    qDebug() << "Button checked state:" << m_toggleRenderParamsButton->isChecked();
+    qDebug() << "Container visible:" << m_renderParamsContainer->isVisible();
+    qDebug() << "Container height:" << m_renderParamsContainer->height();
+    qDebug() << "Container maximumHeight:" << m_renderParamsContainer->maximumHeight();
+
+    // 断开所有之前的finished信号连接，避免干扰
+    disconnect(m_renderParamsAnimation, &QPropertyAnimation::finished, nullptr, nullptr);
+
+    if (m_renderParamsVisible) {
+        // 隐藏参数面板
+        qDebug() << "Starting hide animation...";
+
+        // 立即更新状态变量，确保状态一致性
+        m_renderParamsVisible = false;
+
+        // 同步按钮状态
+        syncRenderParamsButtonState();
+
+        // 设置动画参数
+        int currentHeight = m_renderParamsContainer->height();
+        qDebug() << "Current height for hide animation:" << currentHeight;
+
+        // 确保有有效的起始高度
+        if (currentHeight <= 0) {
+            currentHeight = calculateRenderParamsHeight();
+            qDebug() << "Using calculated height as start value:" << currentHeight;
+        }
+
+        m_renderParamsAnimation->setStartValue(currentHeight);
+        m_renderParamsAnimation->setEndValue(0);
+
+        // 连接动画完成回调
+        connect(m_renderParamsAnimation, &QPropertyAnimation::finished, this, [this]() {
+            qDebug() << "Hide animation finished";
+            m_renderParamsContainer->hide();
+            m_renderParamsContainer->setMaximumHeight(0);
+            qDebug() << "Panel hidden completely";
+        }, Qt::UniqueConnection);
+
+        m_renderParamsAnimation->start();
+
+    } else {
+        // 显示参数面板
+        qDebug() << "Starting show animation...";
+
+        // 立即更新状态变量，确保状态一致性
+        m_renderParamsVisible = true;
+
+        // 同步按钮状态
+        syncRenderParamsButtonState();
+
+        // 先显示容器
+        m_renderParamsContainer->show();
+
+        // 计算内容的理想高度
+        int contentHeight = calculateRenderParamsHeight();
+        qDebug() << "Calculated content height:" << contentHeight;
+
+        // 设置最大高度以允许展开
+        m_renderParamsContainer->setMaximumHeight(contentHeight);
+
+        // 设置动画参数
+        m_renderParamsAnimation->setStartValue(0);
+        m_renderParamsAnimation->setEndValue(contentHeight);
+
+        // 连接动画完成回调
+        connect(m_renderParamsAnimation, &QPropertyAnimation::finished, this, [this]() {
+            qDebug() << "Show animation finished";
+            m_renderParamsContainer->setMaximumHeight(QWIDGETSIZE_MAX); // 允许自由调整大小
+            qDebug() << "Panel shown completely";
+        }, Qt::UniqueConnection);
+
+        m_renderParamsAnimation->start();
+    }
+
+    qDebug() << "Animation started, duration:" << m_renderParamsAnimation->duration() << "ms";
+    qDebug() << "New state - m_renderParamsVisible:" << m_renderParamsVisible;
+    qDebug() << "=== toggleRenderParams end ===";
+}
+
+int Stage1DemoWidget::calculateRenderParamsHeight()
+{
+    int contentHeight = 0;
+
+    // 计算各个子组件的高度
+    if (m_compactLODWidget) {
+        int lodHeight = m_compactLODWidget->sizeHint().height();
+        contentHeight += lodHeight;
+        qDebug() << "LOD widget height:" << lodHeight;
+    }
+
+    if (m_compactColorWidget) {
+        int colorHeight = m_compactColorWidget->sizeHint().height();
+        contentHeight += colorHeight;
+        qDebug() << "Color widget height:" << colorHeight;
+    }
+
+    if (m_compactRenderWidget) {
+        int renderHeight = m_compactRenderWidget->sizeHint().height();
+        contentHeight += renderHeight;
+        qDebug() << "Render widget height:" << renderHeight;
+    }
+
+    // 添加标题、边距和间距
+    contentHeight += 60;  // 标题高度
+    contentHeight += 16;  // 容器内边距 (8*2)
+    contentHeight += 36;  // 组件间距 (12*3)
+
+    // 确保最小高度
+    contentHeight = qMax(contentHeight, 200);
+
+    qDebug() << "Total calculated height:" << contentHeight;
+    return contentHeight;
+}
+
+void Stage1DemoWidget::syncRenderParamsButtonState()
+{
+    qDebug() << "Syncing button state - m_renderParamsVisible:" << m_renderParamsVisible;
+
+    if (m_renderParamsVisible) {
+        m_toggleRenderParamsButton->setText("隐藏参数");
+        m_toggleRenderParamsButton->setChecked(true);
+    } else {
+        m_toggleRenderParamsButton->setText("渲染参数");
+        m_toggleRenderParamsButton->setChecked(false);
+    }
+
+    qDebug() << "Button state synced - text:" << m_toggleRenderParamsButton->text()
+             << "checked:" << m_toggleRenderParamsButton->isChecked();
+}
+
+// ==================== 线框绘制工具折叠功能实现 ====================
+
+void Stage1DemoWidget::createLineDrawingToggleButton()
+{
+    m_toggleLineDrawingButton = new QPushButton("线框绘制工具", this);
+    m_toggleLineDrawingButton->setCheckable(true);
+    m_toggleLineDrawingButton->setChecked(false);  // 默认隐藏
+    m_toggleLineDrawingButton->setStyleSheet(
+        "QPushButton {"
+        "   padding: 12px 20px;"
+        "   font-size: 14px;"
+        "   font-weight: 600;"
+        "   background-color: #3498db;"
+        "   color: white;"
+        "   border: none;"
+        "   border-radius: 6px;"
+        "   min-height: 20px;"
+        "}"
+        "QPushButton:hover {"
+        "   background-color: #2980b9;"
+        "}"
+        "QPushButton:pressed {"
+        "   background-color: #21618c;"
+        "}"
+        "QPushButton:checked {"
+        "   background-color: #e74c3c;"
+        "}"
+        "QPushButton:checked:hover {"
+        "   background-color: #c0392b;"
+        "}"
+    );
+
+    // 连接信号 - 使用与渲染参数相同的处理方式
+    connect(m_toggleLineDrawingButton, &QPushButton::clicked,
+            this, [this](bool checked) {
+                qDebug() << "Line drawing button clicked, checked state:" << checked;
+                qDebug() << "Current m_lineDrawingVisible:" << m_lineDrawingVisible;
+
+                // 重置按钮状态为当前逻辑状态，避免状态不一致
+                m_toggleLineDrawingButton->setChecked(m_lineDrawingVisible);
+
+                // 调用切换方法
+                toggleLineDrawingTools();
+            });
+
+    qDebug() << "Line drawing toggle button created with initial state:"
+             << m_toggleLineDrawingButton->isChecked();
+}
+
+void Stage1DemoWidget::createLineDrawingContainer()
+{
+    m_lineDrawingContainer = new QWidget(this);
+    m_lineDrawingContainer->setStyleSheet(
+        "QWidget {"
+        "   background-color: #f8f9fa;"
+        "   border: 2px solid #dee2e6;"
+        "   border-radius: 8px;"
+        "   padding: 4px;"
+        "}"
+    );
+
+    QVBoxLayout* containerLayout = new QVBoxLayout(m_lineDrawingContainer);
+    containerLayout->setContentsMargins(8, 8, 8, 8);
+    containerLayout->setSpacing(12);
+
+    // 添加标题
+    QLabel* titleLabel = new QLabel("线框绘制工具");
+    titleLabel->setStyleSheet(
+        "QLabel {"
+        "   font-weight: bold;"
+        "   font-size: 15px;"
+        "   color: #212529;"
+        "   padding: 8px 0;"
+        "   border-bottom: 2px solid #e9ecef;"
+        "   margin-bottom: 8px;"
+        "}"
+    );
+    containerLayout->addWidget(titleLabel);
+
+    // 注意：LineDrawingToolbar将在createLineDrawingControls调用后
+    // 通过addLineDrawingControlsToContainer方法添加到容器中
+
+    // 创建动画
+    m_lineDrawingAnimation = new QPropertyAnimation(m_lineDrawingContainer, "maximumHeight", this);
+    m_lineDrawingAnimation->setDuration(300);  // 300ms动画，与渲染参数一致
+    m_lineDrawingAnimation->setEasingCurve(QEasingCurve::InOutQuad);
+
+    // 默认隐藏
+    m_lineDrawingContainer->setMaximumHeight(0);
+    m_lineDrawingContainer->hide();
+    m_lineDrawingVisible = false;
+
+    qDebug() << "Line drawing container created and hidden by default";
+}
+
+void Stage1DemoWidget::toggleLineDrawingTools()
+{
+    // 防止动画进行中的重复点击
+    if (m_lineDrawingAnimation->state() == QAbstractAnimation::Running) {
+        qDebug() << "Line drawing animation is running, ignoring click";
+        return;
+    }
+
+    qDebug() << "=== toggleLineDrawingTools called ===";
+    qDebug() << "Current state - m_lineDrawingVisible:" << m_lineDrawingVisible;
+    qDebug() << "Button checked state:" << m_toggleLineDrawingButton->isChecked();
+    qDebug() << "Container visible:" << m_lineDrawingContainer->isVisible();
+    qDebug() << "Container height:" << m_lineDrawingContainer->height();
+    qDebug() << "Container maximumHeight:" << m_lineDrawingContainer->maximumHeight();
+
+    // 断开所有之前的finished信号连接，避免干扰
+    disconnect(m_lineDrawingAnimation, &QPropertyAnimation::finished, nullptr, nullptr);
+
+    if (m_lineDrawingVisible) {
+        // 隐藏线框绘制工具面板
+        qDebug() << "Starting hide line drawing tools animation...";
+
+        // 立即更新状态变量，确保状态一致性
+        m_lineDrawingVisible = false;
+
+        // 同步按钮状态
+        syncLineDrawingButtonState();
+
+        // 设置动画参数
+        int currentHeight = m_lineDrawingContainer->height();
+        qDebug() << "Current height for hide animation:" << currentHeight;
+
+        // 确保有有效的起始高度
+        if (currentHeight <= 0) {
+            currentHeight = calculateLineDrawingHeight();
+            qDebug() << "Using calculated height as start value:" << currentHeight;
+        }
+
+        m_lineDrawingAnimation->setStartValue(currentHeight);
+        m_lineDrawingAnimation->setEndValue(0);
+
+        // 连接动画完成回调
+        connect(m_lineDrawingAnimation, &QPropertyAnimation::finished, this, [this]() {
+            qDebug() << "Hide line drawing tools animation finished";
+            m_lineDrawingContainer->hide();
+            m_lineDrawingContainer->setMaximumHeight(0);
+            qDebug() << "Line drawing tools panel hidden completely";
+        }, Qt::UniqueConnection);
+
+        m_lineDrawingAnimation->start();
+
+    } else {
+        // 显示线框绘制工具面板
+        qDebug() << "Starting show line drawing tools animation...";
+
+        // 立即更新状态变量，确保状态一致性
+        m_lineDrawingVisible = true;
+
+        // 同步按钮状态
+        syncLineDrawingButtonState();
+
+        // 先显示容器
+        m_lineDrawingContainer->show();
+
+        // 计算内容的理想高度
+        int contentHeight = calculateLineDrawingHeight();
+        qDebug() << "Calculated line drawing content height:" << contentHeight;
+
+        // 设置最大高度以允许展开
+        m_lineDrawingContainer->setMaximumHeight(contentHeight);
+
+        // 设置动画参数
+        m_lineDrawingAnimation->setStartValue(0);
+        m_lineDrawingAnimation->setEndValue(contentHeight);
+
+        // 连接动画完成回调
+        connect(m_lineDrawingAnimation, &QPropertyAnimation::finished, this, [this]() {
+            qDebug() << "Show line drawing tools animation finished";
+            m_lineDrawingContainer->setMaximumHeight(QWIDGETSIZE_MAX); // 允许自由调整大小
+            qDebug() << "Line drawing tools panel shown completely";
+        }, Qt::UniqueConnection);
+
+        m_lineDrawingAnimation->start();
+    }
+
+    qDebug() << "Line drawing animation started, duration:" << m_lineDrawingAnimation->duration() << "ms";
+    qDebug() << "New state - m_lineDrawingVisible:" << m_lineDrawingVisible;
+    qDebug() << "=== toggleLineDrawingTools end ===";
+}
+
+int Stage1DemoWidget::calculateLineDrawingHeight()
+{
+    int contentHeight = 0;
+
+    // 计算LineDrawingToolbar的高度（现在是水平布局组合，高度会减少）
+    if (m_lineDrawingToolbar) {
+        // 重新估算：移除标题 + 绘制模式组(28+边距=50) + 编辑模式组(28+边距=50) +
+        //          工具组(28+边距=50) + 状态组(28+边距=50) + 间距
+        int estimatedToolbarHeight = 50 + 50 + 50 + 50 + 20; // 约220px
+
+        // 使用实际高度或估算高度的较大值
+        int actualHeight = m_lineDrawingToolbar->sizeHint().height();
+        int toolbarHeight = qMax(actualHeight, estimatedToolbarHeight);
+
+        contentHeight += toolbarHeight;
+        qDebug() << "LineDrawingToolbar height (actual/estimated):" << actualHeight << "/" << estimatedToolbarHeight << "-> using:" << toolbarHeight;
+    }
+
+    // LinePropertyPanel已移除，不再计算其高度
+
+    // 添加容器标题、边距和间距（移除了工具栏标题）
+    contentHeight += 40;  // 容器标题高度
+    contentHeight += 16;  // 容器内边距 (8*2)
+    contentHeight += 12;  // 组件间距
+
+    // 由于改为水平布局，减少最小高度
+    contentHeight = qMax(contentHeight, 280);
+
+    qDebug() << "Total calculated line drawing height:" << contentHeight;
+    return contentHeight;
+}
+
+void Stage1DemoWidget::syncLineDrawingButtonState()
+{
+    qDebug() << "Syncing line drawing button state - m_lineDrawingVisible:" << m_lineDrawingVisible;
+
+    if (m_lineDrawingVisible) {
+        m_toggleLineDrawingButton->setText("隐藏工具");
+        m_toggleLineDrawingButton->setChecked(true);
+    } else {
+        m_toggleLineDrawingButton->setText("线框绘制工具");
+        m_toggleLineDrawingButton->setChecked(false);
+    }
+
+    qDebug() << "Line drawing button state synced - text:" << m_toggleLineDrawingButton->text()
+             << "checked:" << m_toggleLineDrawingButton->isChecked();
+}
+
+void Stage1DemoWidget::addLineDrawingControlsToContainer()
+{
+    if (!m_lineDrawingContainer) {
+        qWarning() << "Line drawing container not created yet";
+        return;
+    }
+
+    QVBoxLayout* containerLayout = qobject_cast<QVBoxLayout*>(m_lineDrawingContainer->layout());
+    if (!containerLayout) {
+        qWarning() << "Line drawing container layout not found";
+        return;
+    }
+
+    // 将LineDrawingToolbar添加到容器中
+    if (m_lineDrawingToolbar) {
+        containerLayout->addWidget(m_lineDrawingToolbar);
+        qDebug() << "LineDrawingToolbar added to container";
+    }
 }
 
 void Stage1DemoWidget::resizeEvent(QResizeEvent *event)
@@ -387,40 +892,24 @@ void Stage1DemoWidget::createControlPanel()
     panelLayout->setContentsMargins(12, 12, 12, 12);
     panelLayout->setSpacing(16);
 
-    // 参数控制标题
-    QLabel* titleLabel = new QLabel("渲染参数");
-    titleLabel->setStyleSheet(
-        "QLabel {"
-        "   font-weight: bold;"
-        "   font-size: 16px;"
-        "   color: #212529;"
-        "   padding: 8px 0;"
-        "   border-bottom: 2px solid #e9ecef;"
-        "   margin-bottom: 8px;"
-        "}"
-    );
-    panelLayout->addWidget(titleLabel);
+    // 创建渲染参数切换按钮
+    createRenderParamsToggleButton();
+    panelLayout->addWidget(m_toggleRenderParamsButton);
 
-    // LOD控制区域
-    createCompactLODControl();
-    panelLayout->addWidget(m_compactLODWidget);
+    // 创建可折叠的渲染参数容器
+    createRenderParamsContainer();
+    panelLayout->addWidget(m_renderParamsContainer);
 
-    // 颜色映射控制区域
-    createCompactColorControl();
-    panelLayout->addWidget(m_compactColorWidget);
+    // 创建线框绘制工具切换按钮
+    createLineDrawingToggleButton();
+    panelLayout->addWidget(m_toggleLineDrawingButton);
 
-    // 渲染模式控制区域
-    createCompactRenderControl();
-    panelLayout->addWidget(m_compactRenderWidget);
+    // 创建可折叠的线框绘制工具容器
+    createLineDrawingContainer();
+    panelLayout->addWidget(m_lineDrawingContainer);
 
-    // 线段绘制控制区域
+    // 线段绘制控制区域（现在在折叠容器中创建）
     createLineDrawingControls();
-    if (m_lineDrawingToolbar) {
-        panelLayout->addWidget(m_lineDrawingToolbar);
-    }
-    if (m_linePropertyPanel) {
-        panelLayout->addWidget(m_linePropertyPanel);
-    }
 
     // 底部弹性空间
     panelLayout->addStretch();
@@ -999,19 +1488,14 @@ void Stage1DemoWidget::createLineDrawingControls()
         m_lineDrawingToolbar = new WallExtraction::LineDrawingToolbar(this);
         m_lineDrawingToolbar->setLineDrawingTool(m_wallManager->getLineDrawingTool());
 
-        // 创建线段属性面板
-        m_linePropertyPanel = new WallExtraction::LinePropertyPanel(this);
-        m_linePropertyPanel->setLineDrawingTool(m_wallManager->getLineDrawingTool());
-
-        // 初始状态设置为折叠
-        m_linePropertyPanel->hidePanel();
+        // 将控件添加到折叠容器中
+        addLineDrawingControlsToContainer();
 
         qDebug() << "Line drawing controls created successfully";
 
     } catch (const std::exception& e) {
         qCritical() << "Failed to create line drawing controls:" << e.what();
         m_lineDrawingToolbar = nullptr;
-        m_linePropertyPanel = nullptr;
     }
 }
 
@@ -2885,13 +3369,7 @@ void Stage1DemoWidget::connectSignals()
         qDebug() << "Line drawing toolbar signals connected";
     }
 
-    if (m_linePropertyPanel) {
-        connect(m_linePropertyPanel, &WallExtraction::LinePropertyPanel::panelVisibilityChanged,
-                this, [this](bool visible) {
-                    qDebug() << "Line property panel visibility changed:" << visible;
-                });
-        qDebug() << "Line property panel signals connected";
-    }
+    // LinePropertyPanel已移除，不再连接相关信号
 
     // 连接LineDrawingTool的信号
     if (m_wallManager && m_wallManager->getLineDrawingTool()) {
@@ -2905,6 +3383,18 @@ void Stage1DemoWidget::connectSignals()
                 this, &Stage1DemoWidget::onLineSegmentRemoved);
 
         qDebug() << "LineDrawingTool signals connected";
+    }
+
+    // 渲染参数折叠按钮连接
+    if (m_toggleRenderParamsButton) {
+        // 连接已在createRenderParamsToggleButton中完成
+        qDebug() << "Render parameters toggle button signals connected";
+    }
+
+    // 线框绘制工具折叠按钮连接
+    if (m_toggleLineDrawingButton) {
+        // 连接已在createLineDrawingToggleButton中完成
+        qDebug() << "Line drawing tools toggle button signals connected";
     }
 
     qDebug() << "All signals connected successfully";
@@ -2925,10 +3415,6 @@ void Stage1DemoWidget::onLineDrawingModeChanged()
 {
     qDebug() << "Line drawing mode changed";
     // 可以在这里添加模式切换的UI反馈
-    if (m_linePropertyPanel && m_linePropertyPanel->isPanelVisible()) {
-        // 如果属性面板可见，更新显示
-        m_linePropertyPanel->update();
-    }
 }
 
 void Stage1DemoWidget::onLineSegmentAdded()
@@ -2941,10 +3427,7 @@ void Stage1DemoWidget::onLineSegmentAdded()
 void Stage1DemoWidget::onLineSegmentSelected(int segmentId)
 {
     qDebug() << "Line segment selected:" << segmentId;
-    // 自动显示属性面板当有线段被选中时
-    if (m_linePropertyPanel && !m_linePropertyPanel->isPanelVisible()) {
-        m_linePropertyPanel->showPanel();
-    }
+    // 线段选中处理逻辑（LinePropertyPanel已移除）
 }
 
 void Stage1DemoWidget::onLineSegmentRemoved(int segmentId)
@@ -2953,13 +3436,7 @@ void Stage1DemoWidget::onLineSegmentRemoved(int segmentId)
     // 可以在这里添加线段删除后的处理逻辑
 }
 
-void Stage1DemoWidget::toggleLinePropertyPanel()
-{
-    qDebug() << "Toggling line property panel";
-    if (m_linePropertyPanel) {
-        m_linePropertyPanel->togglePanel();
-    }
-}
+// toggleLinePropertyPanel方法已移除，因为LinePropertyPanel已被完全移除
 
 // 内存使用更新方法已删除
 
