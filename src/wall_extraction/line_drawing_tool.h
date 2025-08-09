@@ -14,6 +14,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_set>
+#include <functional>
 
 namespace WallExtraction {
 
@@ -176,6 +177,10 @@ public:
     QJsonDocument exportToJson() const;
     bool importFromJson(const QJsonDocument& document);
 
+    // 设置外部坐标转换函数（用于与渲染系统集成）
+    void setCoordinateConverter(std::function<QVector3D(const QVector2D&)> screenToWorldFunc,
+                               std::function<QVector2D(const QVector3D&)> worldToScreenFunc);
+
     // 事件处理
     bool handleMousePressEvent(QMouseEvent* event);
     bool handleMouseMoveEvent(QMouseEvent* event);
@@ -220,6 +225,9 @@ signals:
     void errorOccurred(const QString& error);
     void warningOccurred(const QString& warning);
 
+    // 渲染更新信号
+    void visualFeedbackUpdateRequested();
+
 private slots:
     void onInternalUpdate();
 
@@ -245,6 +253,9 @@ private:
                             bool& isStartPoint, float tolerance = 8.0f) const;
     QVector3D screenToWorld(const QVector2D& screenPoint) const;
     QVector2D worldToScreen(const QVector3D& worldPoint) const;
+
+
+
     float distancePointToLineSegment(const QVector2D& point,
                                     const QVector2D& lineStart,
                                     const QVector2D& lineEnd) const;
@@ -298,6 +309,10 @@ private:
     QColor m_defaultLineColor;      // 默认线段颜色
     QColor m_selectedLineColor;     // 选中线段颜色
     QColor m_previewLineColor;      // 预览线段颜色
+
+    // 外部坐标转换函数
+    std::function<QVector3D(const QVector2D&)> m_externalScreenToWorld;
+    std::function<QVector2D(const QVector3D&)> m_externalWorldToScreen;
 };
 
 } // namespace WallExtraction

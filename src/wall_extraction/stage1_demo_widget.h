@@ -19,8 +19,12 @@
 #include <QElapsedTimer>
 #include <QResizeEvent>
 #include <QShowEvent>
+#include <QMouseEvent>
 #include <QFrame>
 #include <QPropertyAnimation>
+#include <QPainter>
+#include <QPen>
+#include <QBrush>
 #include <memory>
 
 // 前向声明
@@ -32,6 +36,8 @@ namespace WallExtraction {
     class PointCloudMemoryManager;
     class SpatialIndex;
     class LineDrawingToolbar;
+    enum class DrawingMode;
+    enum class EditMode;
     enum class ColorScheme;
     enum class TopDownRenderMode;
     struct PointWithAttributes;
@@ -62,6 +68,11 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
     void showEvent(QShowEvent *event) override;
 
+    // 鼠标事件处理（用于线段绘制）
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+
 private slots:
     // 文件操作
     void loadPointCloudFile();
@@ -86,7 +97,8 @@ private slots:
     void saveCurrentImage();
 
     // 线段绘制控制
-    void onLineDrawingModeChanged();
+    void onLineDrawingModeChanged(WallExtraction::DrawingMode mode);
+    void onEditModeChanged(WallExtraction::EditMode mode);
     void onLineSegmentAdded();
     void onLineSegmentSelected(int segmentId);
     void onLineSegmentRemoved(int segmentId);
@@ -172,6 +184,30 @@ private:
     // 测试数据生成方法
     void generateValidTestData(int pointCount);
 
+    // 线段渲染辅助方法
+    QPixmap drawLineSegmentsOnPixmap(const QPixmap& basePixmap);
+    QPointF worldToScreen(const QVector3D& worldPos, const QSize& screenSize,
+                         float worldMin, float worldMax) const;
+    QPointF simplifiedWorldToScreen(const QVector3D& worldPos, const QSize& screenSize) const;
+    QPointF accurateWorldToScreen(const QVector3D& worldPos, const QSize& screenSize, const QRectF& bounds) const;
+    QVector3D accurateScreenToWorld(const QVector2D& screenPoint, const QRectF& bounds) const;
+    QRectF getActualPointCloudBounds() const;
+
+    // 新的视口坐标转换方法（解决复杂场景偏移问题）
+    QVector3D viewportToWorld(const QVector2D& viewportPoint, const QRectF& bounds) const;
+    QPointF worldToViewport(const QVector3D& worldPoint, const QRectF& bounds) const;
+    QPointF viewportToPixmap(const QPointF& viewportPoint, const QSize& pixmapSize) const;
+
+    // 直接的世界坐标到pixmap坐标转换（最简化，避免累积误差）
+    QPointF directWorldToPixmap(const QVector3D& worldPoint, const QSize& pixmapSize, const QRectF& worldBounds) const;
+
+    // 直接的视口坐标转换方法（与渲染器完全一致）
+    QVector3D directViewportToWorld(const QVector2D& viewportPoint, const QRectF& worldBounds) const;
+    QPointF directWorldToViewport(const QVector3D& worldPoint, const QRectF& worldBounds) const;
+
+    // 线段数据管理
+    void clearLineSegmentData();
+
 private:
     // 主布局
     QVBoxLayout* m_mainLayout;
@@ -226,6 +262,15 @@ private:
     // 显示区域
     QLabel* m_renderDisplayLabel;
 
+    // 当前渲染视口和视图边界（用于坐标一致性）
+    QSize m_currentViewportSize;
+    QRectF m_currentViewBounds;
+    QSize m_lastScaledPixmapSize;   // QLabel中显示的pixmap缩放后的尺寸
+    QPoint m_lastPixmapTopLeft;     // QLabel中pixmap的左上角偏移（用于居中时的letterbox）
+
+    // 坐标映射辅助
+    bool mapLabelPosToViewport(const QPoint& labelPos, QPointF& viewportPos) const;
+    bool isPointInRenderedArea(const QPoint& labelPos) const;
     // 渲染参数折叠控制
     QPushButton* m_toggleRenderParamsButton;
     QWidget* m_renderParamsContainer;
@@ -237,6 +282,9 @@ private:
     QWidget* m_lineDrawingContainer;
     QPropertyAnimation* m_lineDrawingAnimation;
     bool m_lineDrawingVisible;
+
+    // 清除状态控制
+    bool m_isClearing;
 
     // 状态标签已删除
     

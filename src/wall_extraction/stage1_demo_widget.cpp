@@ -1,6 +1,7 @@
 #include "stage1_demo_widget.h"
 #include "wall_extraction_manager.h"
 #include "top_down_view_renderer.h"
+#include "view_projection_manager.h"
 #include "color_mapping_manager.h"
 #include "point_cloud_lod_manager.h"
 #include "point_cloud_memory_manager.h"
@@ -31,6 +32,7 @@ Stage1DemoWidget::Stage1DemoWidget(QWidget *parent)
     , m_lineDrawingContainer(nullptr)
     , m_lineDrawingAnimation(nullptr)
     , m_lineDrawingVisible(false)
+    , m_isClearing(false)
     , m_updateTimer(new QTimer(this))
     , m_performanceTimer(new QElapsedTimer())
 {
@@ -717,6 +719,149 @@ void Stage1DemoWidget::showEvent(QShowEvent *event)
         // 强制触发一次完整的布局更新
         forceLayoutUpdate();
     });
+}
+
+// ==================== 鼠标事件处理（用于线段绘制） ====================
+
+void Stage1DemoWidget::mousePressEvent(QMouseEvent *event)
+{
+    qDebug() << "=== Mouse Press Event ===";
+    qDebug() << "Event position:" << event->pos();
+    qDebug() << "Event button:" << event->button();
+
+    // 检查渲染显示标签是否存在
+    if (!m_renderDisplayLabel) {
+        qDebug() << "ERROR: m_renderDisplayLabel is null";
+        QWidget::mousePressEvent(event);
+        return;
+    }
+
+    qDebug() << "Render display label geometry:" << m_renderDisplayLabel->geometry();
+    qDebug() << "Event in render area:" << m_renderDisplayLabel->geometry().contains(event->pos());
+
+    // 检查鼠标事件是否在渲染显示区域内
+    if (m_renderDisplayLabel->geometry().contains(event->pos())) {
+        qDebug() << "Mouse event is in render display area";
+
+        // 将窗口坐标转换为label内部坐标
+        QPoint labelLocal = event->pos() - m_renderDisplayLabel->geometry().topLeft();
+        qDebug() << "Label local position:" << labelLocal;
+
+        QPointF viewportPos;
+        if (!mapLabelPosToViewport(labelLocal, viewportPos)) {
+            qDebug() << "Click is outside the rendered pixmap area, ignoring";
+            return;
+        }
+
+        qDebug() << "Successfully mapped to viewport position:" << viewportPos;
+
+        // 检查WallManager和LineDrawingTool
+        if (!m_wallManager) {
+            qDebug() << "ERROR: m_wallManager is null";
+            QWidget::mousePressEvent(event);
+            return;
+        }
+
+        if (!m_wallManager->getLineDrawingTool()) {
+            qDebug() << "ERROR: LineDrawingTool is null";
+            QWidget::mousePressEvent(event);
+            return;
+        }
+
+        qDebug() << "LineDrawingTool is available";
+        qDebug() << "Current drawing mode:" << static_cast<int>(m_wallManager->getLineDrawingTool()->getDrawingMode());
+
+        // 使用label->viewport映射后的坐标作为事件位置
+        QPoint relativePos = QPoint(static_cast<int>(viewportPos.x()), static_cast<int>(viewportPos.y()));
+        qDebug() << "Viewport-mapped relative position:" << relativePos;
+
+        // 创建新的鼠标事件，使用渲染视口相对坐标
+        QMouseEvent relativeEvent(event->type(), relativePos, event->globalPosition(),
+                                event->button(), event->buttons(), event->modifiers());
+
+        qDebug() << "Calling LineDrawingTool::handleMousePressEvent";
+        bool handled = m_wallManager->getLineDrawingTool()->handleMousePressEvent(&relativeEvent);
+        qDebug() << "LineDrawingTool handled event:" << handled;
+
+        if (handled) {
+            qDebug() << "Mouse press event handled by LineDrawingTool at:" << relativePos;
+            // 触发渲染更新
+            updateRenderView();
+            return;
+        } else {
+            qDebug() << "LineDrawingTool did not handle the event";
+        }
+    } else {
+        qDebug() << "Mouse event is outside render display area";
+    }
+
+    // 如果没有被LineDrawingTool处理，调用父类方法
+    QWidget::mousePressEvent(event);
+}
+
+void Stage1DemoWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    // 检查鼠标事件是否在渲染显示区域内
+    if (m_renderDisplayLabel && m_renderDisplayLabel->geometry().contains(event->pos())) {
+        // 将事件传递给LineDrawingTool
+        if (m_wallManager && m_wallManager->getLineDrawingTool()) {
+            // 将窗口坐标转换为label内部坐标，并映射到渲染视口坐标
+            QPoint labelLocal = event->pos() - m_renderDisplayLabel->geometry().topLeft();
+            QPointF viewportPos;
+            if (!mapLabelPosToViewport(labelLocal, viewportPos)) {
+                return;
+            }
+
+            QPoint relativePos = QPoint(static_cast<int>(viewportPos.x()), static_cast<int>(viewportPos.y()));
+
+            // 创建新的鼠标事件，使用相对坐标
+            QMouseEvent relativeEvent(event->type(), relativePos, event->globalPosition(),
+                                    event->button(), event->buttons(), event->modifiers());
+
+            bool handled = m_wallManager->getLineDrawingTool()->handleMouseMoveEvent(&relativeEvent);
+            if (handled) {
+                // 触发渲染更新（用于实时预览）
+                updateRenderView();
+                return;
+            }
+        }
+    }
+
+    // 如果没有被LineDrawingTool处理，调用父类方法
+    QWidget::mouseMoveEvent(event);
+}
+
+void Stage1DemoWidget::mouseReleaseEvent(QMouseEvent *event)
+{
+    // 检查鼠标事件是否在渲染显示区域内
+    if (m_renderDisplayLabel && m_renderDisplayLabel->geometry().contains(event->pos())) {
+        // 将事件传递给LineDrawingTool
+        if (m_wallManager && m_wallManager->getLineDrawingTool()) {
+            // 将窗口坐标转换为label内部坐标，并映射到渲染视口坐标
+            QPoint labelLocal = event->pos() - m_renderDisplayLabel->geometry().topLeft();
+            QPointF viewportPos;
+            if (!mapLabelPosToViewport(labelLocal, viewportPos)) {
+                return;
+            }
+
+            QPoint relativePos = QPoint(static_cast<int>(viewportPos.x()), static_cast<int>(viewportPos.y()));
+
+            // 创建新的鼠标事件，使用相对坐标
+            QMouseEvent relativeEvent(event->type(), relativePos, event->globalPosition(),
+                                    event->button(), event->buttons(), event->modifiers());
+
+            bool handled = m_wallManager->getLineDrawingTool()->handleMouseReleaseEvent(&relativeEvent);
+            if (handled) {
+                qDebug() << "Mouse release event handled by LineDrawingTool at:" << relativePos;
+                // 触发渲染更新
+                updateRenderView();
+                return;
+            }
+        }
+    }
+
+    // 如果没有被LineDrawingTool处理，调用父类方法
+    QWidget::mouseReleaseEvent(event);
 }
 
 void Stage1DemoWidget::forceLayoutUpdate()
@@ -1486,6 +1631,69 @@ void Stage1DemoWidget::createLineDrawingControls()
     try {
         // 创建线段绘制工具栏
         m_lineDrawingToolbar = new WallExtraction::LineDrawingToolbar(this);
+
+        // 初始化LineDrawingTool
+        if (m_wallManager->getLineDrawingTool()) {
+            bool initSuccess = m_wallManager->getLineDrawingTool()->initialize();
+            if (initSuccess) {
+                qDebug() << "LineDrawingTool initialized successfully";
+
+                // 设置基于渲染器边界的简化坐标转换函数
+                qDebug() << "Setting up LineDrawingTool with renderer view bounds:" << m_currentViewBounds;
+                qDebug() << "Current viewport size:" << m_currentViewportSize;
+
+                // 设置screenToWorld转换函数（直接使用渲染器的投影管理器，确保完全一致）
+                auto screenToWorldFunc = [this](const QVector2D& screenPoint) -> QVector3D {
+                    qDebug() << "=== screenToWorldFunc (Manual) ===";
+                    qDebug() << "Input screenPoint:" << screenPoint;
+
+                    // 使用手动转换，与绘制时保持一致
+                    if (m_currentViewBounds.isEmpty() || !m_currentViewportSize.isValid()) {
+                        qWarning() << "Invalid view bounds or viewport size";
+                        return QVector3D(screenPoint.x(), screenPoint.y(), 0.0f);
+                    }
+
+                    // 像素坐标 -> 标准化坐标 -> 世界坐标
+                    float normalizedX = screenPoint.x() / m_currentViewportSize.width();
+                    float normalizedY = screenPoint.y() / m_currentViewportSize.height();
+
+                    float worldX = m_currentViewBounds.left() + normalizedX * m_currentViewBounds.width();
+                    float worldY = m_currentViewBounds.top() + normalizedY * m_currentViewBounds.height();
+
+                    QVector3D result(worldX, worldY, 0.0f);
+                    qDebug() << "Manual conversion: pixels" << screenPoint << "-> normalized" << normalizedX << normalizedY << "-> world" << result;
+                    return result;
+                };
+
+                // 设置worldToScreen转换函数（直接使用渲染器的投影管理器，确保完全一致）
+                auto worldToScreenFunc = [this](const QVector3D& worldPoint) -> QVector2D {
+                    qDebug() << "=== worldToScreenFunc (Manual) ===";
+                    qDebug() << "Input worldPoint:" << worldPoint;
+
+                    // 使用手动转换，与绘制时保持一致
+                    if (m_currentViewBounds.isEmpty() || !m_currentViewportSize.isValid()) {
+                        qWarning() << "Invalid view bounds or viewport size";
+                        return QVector2D(worldPoint.x(), worldPoint.y());
+                    }
+
+                    // 世界坐标 -> 标准化坐标 -> 像素坐标
+                    float normalizedX = (worldPoint.x() - m_currentViewBounds.left()) / m_currentViewBounds.width();
+                    float normalizedY = (worldPoint.y() - m_currentViewBounds.top()) / m_currentViewBounds.height();
+
+                    QVector2D result(normalizedX * m_currentViewportSize.width(),
+                                    normalizedY * m_currentViewportSize.height());
+
+                    qDebug() << "Manual conversion: world" << worldPoint << "-> normalized" << normalizedX << normalizedY << "-> pixels" << result;
+                    return result;
+                };
+
+                m_wallManager->getLineDrawingTool()->setCoordinateConverter(screenToWorldFunc, worldToScreenFunc);
+                qDebug() << "LineDrawingTool coordinate converters set to use direct renderer coordinate system";
+            } else {
+                qWarning() << "Failed to initialize LineDrawingTool";
+            }
+        }
+
         m_lineDrawingToolbar->setLineDrawingTool(m_wallManager->getLineDrawingTool());
 
         // 将控件添加到折叠容器中
@@ -2246,7 +2454,11 @@ void Stage1DemoWidget::createDisplayArea()
     m_renderDisplayLabel = new QLabel();
     m_renderDisplayLabel->setMinimumSize(400, 300);      // 设置合理的最小尺寸
     m_renderDisplayLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    m_renderDisplayLabel->setScaledContents(true);       // 支持内容缩放
+    m_renderDisplayLabel->setScaledContents(false);      // 禁止自动缩放，避免二次缩放导致坐标错乱
+
+    // 启用鼠标跟踪和事件处理（用于线段绘制）
+    m_renderDisplayLabel->setMouseTracking(true);
+    setMouseTracking(true);
     m_renderDisplayLabel->setStyleSheet(
         "QLabel {"
         "   border: 3px solid #bdc3c7;"
@@ -2488,12 +2700,17 @@ void Stage1DemoWidget::loadPointCloudFile()
         timer.elapsed(); // 记录加载时间
         m_currentFileName = fileName;
 
+        // 清除之前的线段标注数据（新点云应该有独立的标注）
+        clearLineSegmentData();
+
         processLoadedPointCloud();
 
         // 文件加载成功
         m_fileInfoLabel->setText(QString("File: %1 (%2 points)")
                                 .arg(QFileInfo(fileName).baseName())
                                 .arg(m_currentPointCloud.size()));
+
+        qDebug() << "Point cloud file loaded successfully, previous line segment data cleared";
 
     } catch (const std::exception& e) {
         QMessageBox::warning(this, "Error", QString("Failed to load file: %1").arg(e.what()));
@@ -2503,7 +2720,10 @@ void Stage1DemoWidget::loadPointCloudFile()
 
 void Stage1DemoWidget::generateTestData()
 {
-    // 生成测试数据
+    qDebug() << "=== Generating Test Data ===";
+
+    // 清除之前的线段标注数据
+    clearLineSegmentData();
 
     int pointCount = 25000; // 生成25K点的测试数据
     generateSampleData(pointCount);
@@ -2513,21 +2733,96 @@ void Stage1DemoWidget::generateTestData()
 
     // 测试数据生成完成
     m_fileInfoLabel->setText(QString("Generated: %1 points").arg(pointCount));
+
+    qDebug() << "Test data generated, previous line segment data cleared";
 }
 
 void Stage1DemoWidget::clearPointCloud()
 {
+    qDebug() << "=== Clearing Point Cloud and Associated Data ===";
+
+    // 设置清除标志，防止异步渲染
+    m_isClearing = true;
+
+    // 清除点云数据
     m_currentPointCloud.clear();
     m_currentSimpleCloud.clear();
     m_currentFileName.clear();
+    qDebug() << "Point cloud data cleared";
 
+    // 完全清除UI显示
     m_fileInfoLabel->setText("No file loaded");
-    m_renderDisplayLabel->setText("No render result");
-    m_renderDisplayLabel->setPixmap(QPixmap());
 
-    m_stats = Statistics(); // 重置统计信息
+    // 彻底清除渲染显示
+    m_renderDisplayLabel->clear(); // 清除所有内容
+    m_renderDisplayLabel->setPixmap(QPixmap()); // 设置空pixmap
+    m_renderDisplayLabel->setText("No render result"); // 设置提示文本
 
-    // 点云数据已清除
+    // 强制立即更新显示
+    m_renderDisplayLabel->update();
+    m_renderDisplayLabel->repaint();
+    qDebug() << "UI display cleared";
+
+    // 重置统计信息
+    m_stats = Statistics();
+
+    // 清除线段标注数据
+    clearLineSegmentData();
+
+    // 完全重置渲染器状态
+    if (m_renderer) {
+        m_renderer->clearRenderBuffer();
+
+        // 重置渲染器的视图边界和视口大小
+        m_renderer->setViewBounds(-100.0f, 100.0f, -100.0f, 100.0f);
+        m_renderer->setViewportSize(QSize(800, 600));
+
+        qDebug() << "Renderer buffer cleared and state reset";
+    }
+
+    // 清除LOD数据
+    if (m_lodManager) {
+        m_lodManager->clearLODData();
+        qDebug() << "LOD data cleared";
+    }
+
+    // 清除颜色映射缓存
+    if (m_colorMapper) {
+        // ColorMappingManager没有公开的clear方法，但会在下次使用时自动重置
+        qDebug() << "Color mapping will be reset on next use";
+    }
+
+    // 清除内存管理器数据
+    if (m_memoryManager) {
+        m_memoryManager->clearAllData();
+        qDebug() << "Memory manager data cleared";
+    }
+
+    // 重置坐标映射缓存
+    m_lastScaledPixmapSize = QSize();
+    m_lastPixmapTopLeft = QPoint();
+    m_currentViewportSize = QSize();
+    m_currentViewBounds = QRectF();
+
+    // 重置UI控件状态
+    if (m_lodLevelSlider) {
+        m_lodLevelSlider->setValue(0);
+    }
+    if (m_lodInfoLabel) {
+        m_lodInfoLabel->setText("LOD not generated");
+    }
+
+    // 强制刷新整个界面，确保清除操作立即生效
+    this->update();
+    this->repaint();
+    QApplication::processEvents(); // 处理所有待处理的事件
+
+    // 清除标志重置，允许后续正常渲染
+    m_isClearing = false;
+
+    qDebug() << "Point cloud and all associated data cleared completely";
+    qDebug() << "Interface forcefully refreshed to ensure immediate effect";
+    qDebug() << "Clearing flag reset, normal rendering can resume";
 }
 
 // LOD控制槽函数
@@ -2656,6 +2951,12 @@ void Stage1DemoWidget::onPointSizeChanged(double size)
 
 void Stage1DemoWidget::renderTopDownView()
 {
+    // 如果正在清除过程中，阻止渲染
+    if (m_isClearing) {
+        qDebug() << "Clearing in progress, skipping renderTopDownView";
+        return;
+    }
+
     if (m_currentPointCloud.empty()) {
         QMessageBox::information(this, "Info", "Please load point cloud data first");
         return;
@@ -2700,13 +3001,18 @@ void Stage1DemoWidget::renderTopDownView()
     // 动态计算渲染区域大小
     QSize renderSize = calculateOptimalRenderSize();
     m_renderer->setViewportSize(renderSize);
+    m_currentViewportSize = renderSize; // 保存用于坐标一致性
     qDebug() << "Render viewport size:" << renderSize;
 
     // 动态计算视图边界
     QRectF viewBounds = calculatePointCloudBounds();
     m_renderer->setViewBounds(viewBounds.left(), viewBounds.right(),
                              viewBounds.top(), viewBounds.bottom());
+    m_currentViewBounds = viewBounds; // 保存用于坐标一致性
     qDebug() << "View bounds:" << viewBounds;
+    qDebug() << "View bounds details - left:" << viewBounds.left() << "right:" << viewBounds.right()
+             << "top:" << viewBounds.top() << "bottom:" << viewBounds.bottom()
+             << "width:" << viewBounds.width() << "height:" << viewBounds.height();
 
     // 优化颜色映射
     optimizeColorMappingForTopDown();
@@ -2742,19 +3048,37 @@ void Stage1DemoWidget::renderTopDownView()
             // 确保图像不为空且有有效尺寸
             QPixmap pixmap = QPixmap::fromImage(renderResult);
 
+            // 在点云渲染结果上绘制线段
+            pixmap = drawLineSegmentsOnPixmap(pixmap);
+
             // 获取显示标签的当前尺寸
             QSize labelSize = m_renderDisplayLabel->size();
             qDebug() << "Display label size:" << labelSize;
 
             if (labelSize.width() > 0 && labelSize.height() > 0) {
-                // 缩放图像以适应显示区域
-                QPixmap scaledPixmap = pixmap.scaled(labelSize,
-                                                   Qt::KeepAspectRatio,
-                                                   Qt::SmoothTransformation);
+                // 计算在label中居中显示的尺寸（保持等比）
+                QSize pixmapSize = pixmap.size();
+                QSize targetSize = pixmapSize;
+                if (pixmapSize.width() > labelSize.width() || pixmapSize.height() > labelSize.height()) {
+                    targetSize = pixmapSize.scaled(labelSize, Qt::KeepAspectRatio);
+                }
+
+                QPixmap scaledPixmap = pixmap.scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
                 m_renderDisplayLabel->setPixmap(scaledPixmap);
                 m_renderDisplayLabel->setText("");
 
-                qDebug() << "Successfully displayed render result";
+                // 记录缩放后尺寸与偏移（label可能比图像大，图像会居中显示）
+                m_lastScaledPixmapSize = scaledPixmap.size();
+                int offsetX = (labelSize.width() - m_lastScaledPixmapSize.width()) / 2;
+                int offsetY = (labelSize.height() - m_lastScaledPixmapSize.height()) / 2;
+                m_lastPixmapTopLeft = QPoint(offsetX, offsetY);
+                qDebug() << "Scaled pixmap size:" << m_lastScaledPixmapSize << "top-left offset:" << m_lastPixmapTopLeft;
+
+                // 强制立即更新显示
+                m_renderDisplayLabel->update();
+                m_renderDisplayLabel->repaint();
+
+                qDebug() << "Successfully displayed render result with line segments";
                 qDebug() << "Original size:" << pixmap.size() << "-> Scaled size:" << scaledPixmap.size();
             } else {
                 qDebug() << "Display label has invalid size, using original image";
@@ -2833,9 +3157,395 @@ void Stage1DemoWidget::saveRenderResult()
 
 void Stage1DemoWidget::updateRenderView()
 {
-    if (!m_currentPointCloud.empty()) {
-        renderTopDownView();
+    qDebug() << "=== updateRenderView called ===";
+    qDebug() << "Point cloud size:" << m_currentPointCloud.size();
+    qDebug() << "Is clearing:" << m_isClearing;
+
+    // 如果正在清除过程中，阻止任何渲染操作
+    if (m_isClearing) {
+        qDebug() << "Clearing in progress, skipping render update";
+        return;
     }
+
+    if (!m_currentPointCloud.empty()) {
+        qDebug() << "Calling renderTopDownView to update display";
+        renderTopDownView();
+    } else {
+        qDebug() << "Point cloud is empty - clearing display label pixmap";
+
+        // 完全清除显示内容
+        m_renderDisplayLabel->clear(); // 清除所有内容
+        m_renderDisplayLabel->setPixmap(QPixmap()); // 设置空pixmap
+        m_renderDisplayLabel->setText("No render result"); // 设置提示文本
+
+        // 重置坐标映射缓存
+        m_lastScaledPixmapSize = QSize();
+        m_lastPixmapTopLeft = QPoint();
+        m_currentViewportSize = QSize();
+        m_currentViewBounds = QRectF();
+
+        // 强制立即更新显示
+        m_renderDisplayLabel->update();
+        m_renderDisplayLabel->repaint();
+
+        qDebug() << "Display completely cleared and updated";
+    }
+}
+
+QPixmap Stage1DemoWidget::drawLineSegmentsOnPixmap(const QPixmap& basePixmap)
+{
+    qDebug() << "=== drawLineSegmentsOnPixmap ===";
+    qDebug() << "Base pixmap size:" << basePixmap.size();
+    qDebug() << "Current view bounds:" << m_currentViewBounds;
+    qDebug() << "Current viewport size:" << m_currentViewportSize;
+    qDebug() << "ViewBounds details - left:" << m_currentViewBounds.left() << "right:" << m_currentViewBounds.right()
+             << "top:" << m_currentViewBounds.top() << "bottom:" << m_currentViewBounds.bottom();
+
+    // 创建一个可编辑的副本
+    QPixmap result = basePixmap;
+
+    // 检查LineDrawingTool是否可用
+    if (!m_wallManager || !m_wallManager->getLineDrawingTool()) {
+        qDebug() << "LineDrawingTool not available for line segment rendering";
+        return result;
+    }
+
+    auto lineDrawingTool = m_wallManager->getLineDrawingTool();
+    auto lineSegments = lineDrawingTool->getLineSegments();
+
+    if (lineSegments.empty()) {
+        qDebug() << "No line segments to draw";
+        return result;
+    }
+
+    // 不再强制依赖 m_currentViewBounds 的有效性；
+    // 统一用 ViewProjectionManager 的矩阵进行转换即可。
+
+    qDebug() << "Drawing" << lineSegments.size() << "line segments on pixmap";
+
+    // 创建QPainter在pixmap上绘制
+    QPainter painter(&result);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    // 设置线段绘制样式 - 改为白色
+    QPen linePen(QColor(255, 255, 255), 4); // 白色，4像素宽，更明显
+    painter.setPen(linePen);
+
+    // 获取pixmap尺寸用于坐标转换
+    QSize pixmapSize = basePixmap.size();
+    qDebug() << "Pixmap size for coordinate conversion:" << pixmapSize;
+
+    // 检查渲染器是否可用，使用渲染器的坐标系统
+    if (!m_renderer) {
+        qDebug() << "ERROR: Renderer not available for coordinate conversion";
+        return result;
+    }
+
+    // 获取渲染器的ViewProjectionManager - 这是关键！
+    auto projectionManager = m_renderer->getProjectionManager();
+    if (!projectionManager) {
+        qDebug() << "ERROR: ViewProjectionManager not available";
+        return result;
+    }
+
+    // 确保ViewProjectionManager使用与pixmap相同的视口大小
+    projectionManager->setViewportSize(pixmapSize);
+
+    // 确保ViewProjectionManager使用与点云渲染相同的视图边界
+    if (!m_currentViewBounds.isEmpty()) {
+        projectionManager->setViewBounds(m_currentViewBounds);
+        qDebug() << "Set projection manager bounds to:" << m_currentViewBounds;
+    } else {
+        qWarning() << "Current view bounds is empty, using default";
+        // 使用实际点云边界作为备用
+        QRectF actualBounds = getActualPointCloudBounds();
+        if (!actualBounds.isEmpty()) {
+            projectionManager->setViewBounds(actualBounds);
+            qDebug() << "Using actual point cloud bounds:" << actualBounds;
+        }
+    }
+
+    // 调试：验证 ProjectionManager 的设置
+    qDebug() << "Final ProjectionManager settings:";
+    qDebug() << "  ViewportSize:" << projectionManager->getViewportSize();
+    qDebug() << "  ViewBounds:" << projectionManager->getViewBounds();
+
+    // 绘制每个线段
+    int segmentIndex = 0;
+    for (const auto& segment : lineSegments) {
+        qDebug() << "--- Segment" << segmentIndex << "---";
+        qDebug() << "World start point:" << segment.startPoint;
+        qDebug() << "World end point:" << segment.endPoint;
+
+        // 转换为3D世界坐标（Z=0用于俯视图）
+        QVector3D worldStart(segment.startPoint.x(), segment.startPoint.y(), 0);
+        QVector3D worldEnd(segment.endPoint.x(), segment.endPoint.y(), 0);
+
+        qDebug() << "Converting world coordinates using ViewProjectionManager";
+        qDebug() << "World start:" << worldStart;
+        qDebug() << "World end:" << worldEnd;
+
+        // ViewProjectionManager 有问题，直接使用手动转换
+        QRectF bounds = projectionManager->getViewBounds();
+        qDebug() << "Using manual coordinate conversion";
+        qDebug() << "World coordinates - start:" << worldStart << "end:" << worldEnd;
+        qDebug() << "View bounds:" << bounds;
+        qDebug() << "Pixmap size:" << pixmapSize;
+
+        // 手动坐标转换：世界坐标 -> 标准化坐标 -> 像素坐标
+        float normalizedStartX = (worldStart.x() - bounds.left()) / bounds.width();
+        float normalizedStartY = (worldStart.y() - bounds.top()) / bounds.height();
+        QVector2D startScreen(normalizedStartX * pixmapSize.width(),
+                             normalizedStartY * pixmapSize.height());
+
+        float normalizedEndX = (worldEnd.x() - bounds.left()) / bounds.width();
+        float normalizedEndY = (worldEnd.y() - bounds.top()) / bounds.height();
+        QVector2D endScreen(normalizedEndX * pixmapSize.width(),
+                           normalizedEndY * pixmapSize.height());
+
+        qDebug() << "Manual conversion:";
+        qDebug() << "  Start normalized:" << normalizedStartX << normalizedStartY << "-> pixels:" << startScreen;
+        qDebug() << "  End normalized:" << normalizedEndX << normalizedEndY << "-> pixels:" << endScreen;
+
+        // 检查坐标是否在合理范围内
+        bool coordsOutOfBounds = (startScreen.x() < 0 || startScreen.x() > pixmapSize.width() ||
+                                 startScreen.y() < 0 || startScreen.y() > pixmapSize.height() ||
+                                 endScreen.x() < 0 || endScreen.x() > pixmapSize.width() ||
+                                 endScreen.y() < 0 || endScreen.y() > pixmapSize.height());
+
+        if (coordsOutOfBounds) {
+            qDebug() << "WARNING: Line segment coordinates are outside pixmap bounds!";
+            qDebug() << "Pixmap size:" << pixmapSize << "Start:" << startScreen << "End:" << endScreen;
+            // 调试阶段：改为夹取到可见范围，而不是跳过
+            auto clampPoint = [&](const QPointF& p) -> QPointF {
+                double cx = qBound(0.0, static_cast<double>(p.x()), static_cast<double>(pixmapSize.width() - 1));
+                double cy = qBound(0.0, static_cast<double>(p.y()), static_cast<double>(pixmapSize.height() - 1));
+                return QPointF(cx, cy);
+            };
+            QPointF startClamped = clampPoint(QPointF(startScreen.x(), startScreen.y()));
+            QPointF endClamped = clampPoint(QPointF(endScreen.x(), endScreen.y()));
+            qDebug() << "Clamped to:" << startClamped << "->" << endClamped;
+            painter.drawLine(startClamped, endClamped);
+            painter.setBrush(QBrush(QColor(255, 128, 0))); // 橙色端点，表示被夹取
+            painter.drawEllipse(startClamped, 4, 4);
+            painter.drawEllipse(endClamped, 4, 4);
+            painter.setBrush(QBrush());
+            segmentIndex++;
+            continue;
+        }
+
+        // 绘制线段 - 转换QVector2D到QPointF
+        QPointF startPoint(startScreen.x(), startScreen.y());
+        QPointF endPoint(endScreen.x(), endScreen.y());
+
+        painter.drawLine(startPoint, endPoint);
+
+        // 绘制端点（小圆圈）
+        painter.setBrush(QBrush(QColor(255, 255, 0))); // 黄色端点
+        painter.drawEllipse(startPoint, 4, 4);
+        painter.drawEllipse(endPoint, 4, 4);
+        painter.setBrush(QBrush()); // 清除画刷
+
+        qDebug() << "Drew line segment from" << startPoint << "to" << endPoint;
+        segmentIndex++;
+    }
+
+    // 临时调试：绘制一个固定的测试线段，确保绘制流程工作
+    qDebug() << "Drawing test line segment for debugging";
+    QPen testPen(QColor(0, 255, 0), 6); // 绿色，6像素宽
+    painter.setPen(testPen);
+    QPointF testStart(50, 50);
+    QPointF testEnd(pixmapSize.width() - 50, pixmapSize.height() - 50);
+    painter.drawLine(testStart, testEnd);
+
+    // 绘制测试端点
+    painter.setBrush(QBrush(QColor(255, 0, 255))); // 紫色端点
+    painter.drawEllipse(testStart, 8, 8);
+    painter.drawEllipse(testEnd, 8, 8);
+    painter.setBrush(QBrush());
+    qDebug() << "Test line drawn from" << testStart << "to" << testEnd;
+
+    painter.end();
+
+    qDebug() << "Finished drawing line segments";
+    return result;
+}
+
+// 辅助方法：将世界坐标转换为屏幕坐标（与LineDrawingTool保持一致）
+QPointF Stage1DemoWidget::worldToScreen(const QVector3D& worldPos, const QSize& screenSize,
+                                       float worldMin, float worldMax) const
+{
+    // 使用与LineDrawingTool相同的坐标转换逻辑
+    // LineDrawingTool使用±50的世界坐标范围
+
+    qDebug() << "Converting world pos:" << worldPos << "to screen size:" << screenSize;
+
+    // 简化的屏幕坐标转换（与LineDrawingTool::worldToScreen保持一致）
+    float width = screenSize.width();
+    float height = screenSize.height();
+
+    if (width <= 0 || height <= 0) {
+        qDebug() << "Invalid screen size, returning original coordinates";
+        return QPointF(worldPos.x(), worldPos.y());
+    }
+
+    // 使用与LineDrawingTool相同的转换公式
+    float x = (worldPos.x() / 50.0f + 1.0f) * width * 0.5f;
+    float y = (1.0f - worldPos.y() / 50.0f) * height * 0.5f;
+
+    QPointF result(x, y);
+    qDebug() << "Converted to screen pos:" << result;
+
+    return result;
+}
+
+// 简化的世界坐标到屏幕坐标转换（备用方案）
+QPointF Stage1DemoWidget::simplifiedWorldToScreen(const QVector3D& worldPos, const QSize& screenSize) const
+{
+    qDebug() << "Using simplified coordinate conversion for:" << worldPos;
+
+    // 使用与LineDrawingTool相同的简化转换逻辑
+    float width = screenSize.width();
+    float height = screenSize.height();
+
+    if (width <= 0 || height <= 0) {
+        qDebug() << "Invalid screen size, returning original coordinates";
+        return QPointF(worldPos.x(), worldPos.y());
+    }
+
+    // 使用与LineDrawingTool相同的转换公式（±50的世界坐标范围）
+    float x = (worldPos.x() / 50.0f + 1.0f) * width * 0.5f;
+    float y = (1.0f - worldPos.y() / 50.0f) * height * 0.5f;
+
+    QPointF result(x, y);
+    qDebug() << "Simplified conversion result:" << result;
+
+    return result;
+}
+
+// 获取实际点云的坐标范围
+QRectF Stage1DemoWidget::getActualPointCloudBounds() const
+{
+    qDebug() << "=== getActualPointCloudBounds ===";
+
+    if (m_currentPointCloud.empty()) {
+        qDebug() << "Point cloud is empty, returning empty bounds";
+        return QRectF();
+    }
+
+    // 计算点云的实际边界
+    float minX = std::numeric_limits<float>::max();
+    float maxX = std::numeric_limits<float>::lowest();
+    float minY = std::numeric_limits<float>::max();
+    float maxY = std::numeric_limits<float>::lowest();
+
+    // 遍历所有点以获得精确边界（对于线段标注精度很重要）
+    for (const auto& point : m_currentPointCloud) {
+        minX = std::min(minX, point.position.x());
+        maxX = std::max(maxX, point.position.x());
+        minY = std::min(minY, point.position.y());
+        maxY = std::max(maxY, point.position.y());
+    }
+
+    // 不添加边距，使用精确边界以确保线段标注准确
+    QRectF bounds(minX, minY, maxX - minX, maxY - minY);
+
+    qDebug() << "Calculated actual bounds:" << bounds;
+    qDebug() << "Point cloud size:" << m_currentPointCloud.size();
+
+    return bounds;
+}
+
+// 精确的世界坐标到屏幕坐标转换（使用实际边界）
+QPointF Stage1DemoWidget::accurateWorldToScreen(const QVector3D& worldPos, const QSize& screenSize, const QRectF& bounds) const
+{
+    qDebug() << "Accurate conversion - World:" << worldPos << "Bounds:" << bounds;
+
+    float width = screenSize.width();
+    float height = screenSize.height();
+
+    if (width <= 0 || height <= 0 || bounds.width() <= 0 || bounds.height() <= 0) {
+        qDebug() << "Invalid parameters for coordinate conversion";
+        return QPointF(worldPos.x(), worldPos.y());
+    }
+
+    // 将世界坐标映射到屏幕坐标
+    float normalizedX = (worldPos.x() - bounds.left()) / bounds.width();
+    float normalizedY = (worldPos.y() - bounds.top()) / bounds.height();
+
+    // 转换到屏幕坐标，Y轴翻转
+    float screenX = normalizedX * width;
+    float screenY = (1.0f - normalizedY) * height;
+
+    QPointF result(screenX, screenY);
+    qDebug() << "Accurate conversion result:" << result;
+
+    return result;
+}
+
+// 精确的屏幕坐标到世界坐标转换（使用实际边界）
+QVector3D Stage1DemoWidget::accurateScreenToWorld(const QVector2D& screenPoint, const QRectF& bounds) const
+{
+    qDebug() << "Accurate screen to world - Screen:" << screenPoint << "Bounds:" << bounds;
+
+    // 使用渲染显示标签的尺寸
+    QSize renderSize = m_renderDisplayLabel->size();
+    float width = renderSize.width();
+    float height = renderSize.height();
+
+    if (width <= 0 || height <= 0 || bounds.width() <= 0 || bounds.height() <= 0) {
+        qDebug() << "Invalid parameters for screen to world conversion";
+        return QVector3D(screenPoint.x(), screenPoint.y(), 0.0f);
+    }
+
+    // 将屏幕坐标标准化到[0,1]范围
+    float normalizedX = screenPoint.x() / width;
+    float normalizedY = screenPoint.y() / height;
+
+    // Y轴翻转（屏幕坐标Y向下，世界坐标Y向上）
+    normalizedY = 1.0f - normalizedY;
+
+    // 映射到世界坐标
+    float worldX = bounds.left() + normalizedX * bounds.width();
+    float worldY = bounds.top() + normalizedY * bounds.height();
+
+    QVector3D result(worldX, worldY, 0.0f);
+    qDebug() << "Accurate screen to world result:" << result;
+
+    return result;
+}
+
+// 清除线段标注数据
+void Stage1DemoWidget::clearLineSegmentData()
+{
+    qDebug() << "=== Clearing Line Segment Data ===";
+
+    if (!m_wallManager) {
+        qDebug() << "WallManager not available, skipping line segment data clearing";
+        return;
+    }
+
+    auto lineDrawingTool = m_wallManager->getLineDrawingTool();
+    if (!lineDrawingTool) {
+        qDebug() << "LineDrawingTool not available, skipping line segment data clearing";
+        return;
+    }
+
+    // 清除所有线段数据
+    lineDrawingTool->clearAll();
+    qDebug() << "All line segments cleared from LineDrawingTool";
+
+    // 重置绘制状态
+    lineDrawingTool->setDrawingMode(WallExtraction::DrawingMode::None);
+    qDebug() << "Drawing mode reset to None";
+
+    // 如果有线段绘制工具栏，也重置其状态
+    if (m_lineDrawingToolbar) {
+        // 工具栏会自动响应LineDrawingTool的状态变化
+        qDebug() << "LineDrawingToolbar will update automatically";
+    }
+
+    qDebug() << "Line segment data clearing completed";
 }
 
 // 私有辅助方法
@@ -3286,6 +3996,12 @@ void Stage1DemoWidget::generateValidTestData(int pointCount)
 
 void Stage1DemoWidget::updateColorMapping()
 {
+    // 如果正在清除过程中，阻止颜色映射更新
+    if (m_isClearing) {
+        qDebug() << "Clearing in progress, skipping color mapping update";
+        return;
+    }
+
     generateColorBar();
     if (!m_currentPointCloud.empty()) {
         updateTopDownView();
@@ -3294,6 +4010,12 @@ void Stage1DemoWidget::updateColorMapping()
 
 void Stage1DemoWidget::updateLODDisplay()
 {
+    // 如果正在清除过程中，阻止LOD更新
+    if (m_isClearing) {
+        qDebug() << "Clearing in progress, skipping LOD display update";
+        return;
+    }
+
     if (m_lodManager->getLODLevelCount() == 0) {
         return;
     }
@@ -3366,6 +4088,8 @@ void Stage1DemoWidget::connectSignals()
     if (m_lineDrawingToolbar) {
         connect(m_lineDrawingToolbar, &WallExtraction::LineDrawingToolbar::drawingModeChangeRequested,
                 this, &Stage1DemoWidget::onLineDrawingModeChanged);
+        connect(m_lineDrawingToolbar, &WallExtraction::LineDrawingToolbar::editModeChangeRequested,
+                this, &Stage1DemoWidget::onEditModeChanged);
         qDebug() << "Line drawing toolbar signals connected";
     }
 
@@ -3381,6 +4105,8 @@ void Stage1DemoWidget::connectSignals()
                 this, &Stage1DemoWidget::onLineSegmentSelected);
         connect(lineDrawingTool, &WallExtraction::LineDrawingTool::lineSegmentRemoved,
                 this, &Stage1DemoWidget::onLineSegmentRemoved);
+        connect(lineDrawingTool, &WallExtraction::LineDrawingTool::visualFeedbackUpdateRequested,
+                this, &Stage1DemoWidget::updateRenderView);
 
         qDebug() << "LineDrawingTool signals connected";
     }
@@ -3411,10 +4137,30 @@ void Stage1DemoWidget::saveCurrentImage()
 }
 
 // 线段绘制相关槽函数实现
-void Stage1DemoWidget::onLineDrawingModeChanged()
+void Stage1DemoWidget::onLineDrawingModeChanged(WallExtraction::DrawingMode mode)
 {
-    qDebug() << "Line drawing mode changed";
-    // 可以在这里添加模式切换的UI反馈
+    qDebug() << "Line drawing mode changed to:" << static_cast<int>(mode);
+
+    // 将模式传递给LineDrawingTool
+    if (m_wallManager && m_wallManager->getLineDrawingTool()) {
+        m_wallManager->getLineDrawingTool()->setDrawingMode(mode);
+        qDebug() << "Drawing mode set on LineDrawingTool";
+    } else {
+        qWarning() << "LineDrawingTool not available for mode change";
+    }
+}
+
+void Stage1DemoWidget::onEditModeChanged(WallExtraction::EditMode mode)
+{
+    qDebug() << "Edit mode changed to:" << static_cast<int>(mode);
+
+    // 将编辑模式传递给LineDrawingTool
+    if (m_wallManager && m_wallManager->getLineDrawingTool()) {
+        m_wallManager->getLineDrawingTool()->setEditMode(mode);
+        qDebug() << "Edit mode set on LineDrawingTool";
+    } else {
+        qWarning() << "LineDrawingTool not available for edit mode change";
+    }
 }
 
 void Stage1DemoWidget::onLineSegmentAdded()
@@ -3443,3 +4189,258 @@ void Stage1DemoWidget::onLineSegmentRemoved(int segmentId)
 // 渲染统计更新方法已删除
 
 // 性能指标更新方法已删除
+
+// ==================== 坐标映射辅助方法 ====================
+
+// 将QLabel内坐标映射到渲染视口坐标
+bool Stage1DemoWidget::mapLabelPosToViewport(const QPoint& labelPos, QPointF& viewportPos) const
+{
+    qDebug() << "=== mapLabelPosToViewport ===";
+    qDebug() << "Input labelPos:" << labelPos;
+    qDebug() << "Last scaled pixmap size:" << m_lastScaledPixmapSize;
+    qDebug() << "Last pixmap top left:" << m_lastPixmapTopLeft;
+
+    // 检查是否有有效的缩放pixmap信息
+    if (m_lastScaledPixmapSize.isEmpty()) {
+        qDebug() << "No scaled pixmap size recorded, cannot map coordinates";
+        return false;
+    }
+
+    // 检查点击是否在实际渲染的pixmap区域内（排除letterbox区域）
+    QRect pixmapRect(m_lastPixmapTopLeft, m_lastScaledPixmapSize);
+    qDebug() << "Pixmap rect:" << pixmapRect;
+
+    if (!pixmapRect.contains(labelPos)) {
+        qDebug() << "Click position" << labelPos << "is outside pixmap area" << pixmapRect;
+        return false;
+    }
+
+    // 将label内坐标转换为pixmap内坐标（去除letterbox偏移）
+    QPoint pixmapLocal = labelPos - m_lastPixmapTopLeft;
+    qDebug() << "Pixmap local pos:" << pixmapLocal;
+
+    // 确保pixmap坐标在有效范围内
+    if (pixmapLocal.x() < 0 || pixmapLocal.y() < 0 ||
+        pixmapLocal.x() >= m_lastScaledPixmapSize.width() ||
+        pixmapLocal.y() >= m_lastScaledPixmapSize.height()) {
+        qDebug() << "Pixmap local position out of bounds:" << pixmapLocal;
+        return false;
+    }
+
+    // 计算在pixmap内的相对位置（0.0-1.0）
+    float relativeX = static_cast<float>(pixmapLocal.x()) / m_lastScaledPixmapSize.width();
+    float relativeY = static_cast<float>(pixmapLocal.y()) / m_lastScaledPixmapSize.height();
+
+    qDebug() << "Relative coords:" << relativeX << "," << relativeY;
+
+    // 映射到渲染视口坐标
+    viewportPos.setX(relativeX * m_currentViewportSize.width());
+    viewportPos.setY(relativeY * m_currentViewportSize.height());
+
+    qDebug() << "Final viewport pos:" << viewportPos;
+    qDebug() << "Current viewport size:" << m_currentViewportSize;
+
+    return true;
+}
+
+// 检查点击是否在渲染区域内
+bool Stage1DemoWidget::isPointInRenderedArea(const QPoint& labelPos) const
+{
+    if (m_lastScaledPixmapSize.isEmpty()) {
+        return false;
+    }
+
+    QRect pixmapRect(m_lastPixmapTopLeft, m_lastScaledPixmapSize);
+    return pixmapRect.contains(labelPos);
+}
+
+// ==================== 新的视口坐标转换方法 ====================
+
+// 视口坐标到世界坐标转换（基于当前视图边界）
+QVector3D Stage1DemoWidget::viewportToWorld(const QVector2D& viewportPoint, const QRectF& bounds) const
+{
+    qDebug() << "=== viewportToWorld ===";
+    qDebug() << "Viewport point:" << viewportPoint;
+    qDebug() << "Current viewport size:" << m_currentViewportSize;
+    qDebug() << "Current view bounds:" << m_currentViewBounds;
+
+    if (m_currentViewportSize.isEmpty() || m_currentViewBounds.isEmpty()) {
+        qDebug() << "ERROR: Invalid viewport size or view bounds";
+        return QVector3D(viewportPoint.x(), viewportPoint.y(), 0.0f);
+    }
+
+    // 将视口坐标标准化到[0,1]范围
+    float normalizedX = viewportPoint.x() / m_currentViewportSize.width();
+    float normalizedY = viewportPoint.y() / m_currentViewportSize.height();
+
+    // 映射到世界坐标（使用当前视图边界）
+    float worldX = m_currentViewBounds.left() + normalizedX * m_currentViewBounds.width();
+    float worldY = m_currentViewBounds.top() + (1.0f - normalizedY) * m_currentViewBounds.height(); // Y轴翻转
+
+    QVector3D result(worldX, worldY, 0.0f);
+    qDebug() << "Converted to world:" << result;
+
+    return result;
+}
+
+// 世界坐标到视口坐标转换（基于当前视图边界）
+QPointF Stage1DemoWidget::worldToViewport(const QVector3D& worldPoint, const QRectF& bounds) const
+{
+    qDebug() << "=== worldToViewport ===";
+    qDebug() << "World point:" << worldPoint;
+    qDebug() << "Current viewport size:" << m_currentViewportSize;
+    qDebug() << "Current view bounds:" << m_currentViewBounds;
+
+    if (m_currentViewportSize.isEmpty() || m_currentViewBounds.isEmpty()) {
+        qDebug() << "ERROR: Invalid viewport size or view bounds";
+        return QPointF(worldPoint.x(), worldPoint.y());
+    }
+
+    // 将世界坐标标准化到[0,1]范围
+    float normalizedX = (worldPoint.x() - m_currentViewBounds.left()) / m_currentViewBounds.width();
+    float normalizedY = (worldPoint.y() - m_currentViewBounds.top()) / m_currentViewBounds.height();
+
+    // Y轴翻转并映射到视口坐标
+    float viewportX = normalizedX * m_currentViewportSize.width();
+    float viewportY = (1.0f - normalizedY) * m_currentViewportSize.height();
+
+    QPointF result(viewportX, viewportY);
+    qDebug() << "Converted to viewport:" << result;
+
+    return result;
+}
+
+// 视口坐标到pixmap坐标转换（用于线段绘制）
+QPointF Stage1DemoWidget::viewportToPixmap(const QPointF& viewportPoint, const QSize& pixmapSize) const
+{
+    if (m_currentViewportSize.isEmpty()) {
+        qDebug() << "ERROR: Current viewport size is empty";
+        return viewportPoint;
+    }
+
+    // 计算缩放比例
+    float scaleX = static_cast<float>(pixmapSize.width()) / m_currentViewportSize.width();
+    float scaleY = static_cast<float>(pixmapSize.height()) / m_currentViewportSize.height();
+
+    QPointF result(viewportPoint.x() * scaleX, viewportPoint.y() * scaleY);
+    qDebug() << "Viewport to pixmap:" << viewportPoint << "->" << result;
+
+    return result;
+}
+
+// 直接的世界坐标到pixmap坐标转换（最简化，避免累积误差）
+QPointF Stage1DemoWidget::directWorldToPixmap(const QVector3D& worldPoint, const QSize& pixmapSize, const QRectF& worldBounds) const
+{
+    qDebug() << "=== directWorldToPixmap ===";
+    qDebug() << "World point:" << worldPoint;
+    qDebug() << "Pixmap size:" << pixmapSize;
+    qDebug() << "World bounds:" << worldBounds;
+
+    // 增强的输入验证
+    if (worldBounds.isEmpty() || pixmapSize.isEmpty()) {
+        qDebug() << "ERROR: Invalid world bounds or pixmap size";
+        return QPointF(worldPoint.x(), worldPoint.y());
+    }
+
+    if (worldBounds.width() <= 0 || worldBounds.height() <= 0) {
+        qWarning() << "Invalid world bounds dimensions:" << worldBounds;
+        return QPointF(worldPoint.x(), worldPoint.y());
+    }
+
+    if (pixmapSize.width() <= 0 || pixmapSize.height() <= 0) {
+        qWarning() << "Invalid pixmap dimensions:" << pixmapSize;
+        return QPointF(worldPoint.x(), worldPoint.y());
+    }
+
+    // 将世界坐标标准化到[0,1]范围
+    float normalizedX = (worldPoint.x() - worldBounds.left()) / worldBounds.width();
+    float normalizedY = (worldPoint.y() - worldBounds.top()) / worldBounds.height();
+
+    qDebug() << "Normalized coords:" << normalizedX << "," << normalizedY;
+
+    // 确保标准化坐标在合理范围内（允许稍微超出边界）
+    if (normalizedX < -0.1f || normalizedX > 1.1f || normalizedY < -0.1f || normalizedY > 1.1f) {
+        qWarning() << "World point significantly outside bounds:" << worldPoint << "in bounds:" << worldBounds;
+    }
+
+    // 直接映射到pixmap坐标，Y轴翻转
+    float pixmapX = normalizedX * pixmapSize.width();
+    float pixmapY = (1.0f - normalizedY) * pixmapSize.height();
+
+    QPointF result(pixmapX, pixmapY);
+    qDebug() << "Direct conversion result:" << result;
+
+    return result;
+}
+
+// 直接的视口坐标到世界坐标转换（与渲染器完全一致）
+QVector3D Stage1DemoWidget::directViewportToWorld(const QVector2D& viewportPoint, const QRectF& worldBounds) const
+{
+    qDebug() << "=== directViewportToWorld ===";
+    qDebug() << "Viewport point:" << viewportPoint;
+    qDebug() << "Current viewport size:" << m_currentViewportSize;
+    qDebug() << "World bounds:" << worldBounds;
+
+    // 增强的输入验证
+    if (m_currentViewportSize.isEmpty() || worldBounds.isEmpty()) {
+        qDebug() << "ERROR: Invalid viewport size or world bounds";
+        return QVector3D(viewportPoint.x(), viewportPoint.y(), 0.0f);
+    }
+
+    if (m_currentViewportSize.width() <= 0 || m_currentViewportSize.height() <= 0) {
+        qWarning() << "Invalid viewport dimensions:" << m_currentViewportSize;
+        return QVector3D(0, 0, 0);
+    }
+
+    if (worldBounds.width() <= 0 || worldBounds.height() <= 0) {
+        qWarning() << "Invalid world bounds dimensions:" << worldBounds;
+        return QVector3D(0, 0, 0);
+    }
+
+    // 将视口坐标标准化到[0,1]范围
+    float normalizedX = viewportPoint.x() / m_currentViewportSize.width();
+    float normalizedY = viewportPoint.y() / m_currentViewportSize.height();
+
+    // 确保标准化坐标在有效范围内
+    normalizedX = qBound(0.0f, normalizedX, 1.0f);
+    normalizedY = qBound(0.0f, normalizedY, 1.0f);
+
+    qDebug() << "Normalized coords:" << normalizedX << "," << normalizedY;
+
+    // 映射到世界坐标，Y轴翻转
+    float worldX = worldBounds.left() + normalizedX * worldBounds.width();
+    float worldY = worldBounds.top() + (1.0f - normalizedY) * worldBounds.height();
+
+    QVector3D result(worldX, worldY, 0.0f);
+    qDebug() << "Direct viewport to world result:" << result;
+
+    return result;
+}
+
+
+// 直接的世界坐标到视口坐标转换（与渲染器完全一致）
+QPointF Stage1DemoWidget::directWorldToViewport(const QVector3D& worldPoint, const QRectF& worldBounds) const
+{
+    qDebug() << "=== directWorldToViewport ===";
+    qDebug() << "World point:" << worldPoint;
+    qDebug() << "Current viewport size:" << m_currentViewportSize;
+    qDebug() << "World bounds:" << worldBounds;
+
+    if (m_currentViewportSize.isEmpty() || worldBounds.isEmpty()) {
+        qDebug() << "ERROR: Invalid viewport size or world bounds";
+        return QPointF(worldPoint.x(), worldPoint.y());
+    }
+
+    // 将世界坐标标准化到[0,1]范围
+    float normalizedX = (worldPoint.x() - worldBounds.left()) / worldBounds.width();
+    float normalizedY = (worldPoint.y() - worldBounds.top()) / worldBounds.height();
+
+    // 映射到视口坐标，Y轴翻转
+    float viewportX = normalizedX * m_currentViewportSize.width();
+    float viewportY = (1.0f - normalizedY) * m_currentViewportSize.height();
+
+    QPointF result(viewportX, viewportY);
+    qDebug() << "Direct world to viewport result:" << result;
+
+    return result;
+}

@@ -129,16 +129,23 @@ LineDrawingTool::~LineDrawingTool()
 
 bool LineDrawingTool::initialize()
 {
+    qDebug() << "=== LineDrawingTool::initialize() called ===";
+
     if (m_initialized) {
+        qDebug() << "LineDrawingTool already initialized";
         return true;
     }
 
     try {
+        qDebug() << "Initializing data structures...";
         initializeDataStructures();
+
+        qDebug() << "Setting up event handling...";
         setupEventHandling();
 
         m_initialized = true;
         qDebug() << "LineDrawingTool initialized successfully";
+        qDebug() << "Current drawing mode:" << static_cast<int>(m_currentDrawingMode);
 
         return true;
     } catch (const std::exception& e) {
@@ -984,20 +991,42 @@ bool LineDrawingTool::moveEndpoint(int segmentId, bool isStartPoint, const QVect
 // 事件处理（基础框架，具体实现需要与渲染系统集成）
 bool LineDrawingTool::handleMousePressEvent(QMouseEvent* event)
 {
-    if (!m_initialized || !event) {
+    qDebug() << "=== LineDrawingTool::handleMousePressEvent ===";
+    qDebug() << "Initialized:" << m_initialized;
+    qDebug() << "Event valid:" << (event != nullptr);
+
+    if (!m_initialized) {
+        qDebug() << "ERROR: LineDrawingTool not initialized";
         return false;
     }
 
+    if (!event) {
+        qDebug() << "ERROR: Mouse event is null";
+        return false;
+    }
+
+    qDebug() << "Current drawing mode:" << static_cast<int>(m_currentDrawingMode);
+    qDebug() << "Event position:" << event->pos();
+    qDebug() << "Event button:" << event->button();
+
     switch (m_currentDrawingMode) {
         case DrawingMode::SingleLine:
+            qDebug() << "Handling single line drawing";
             return handleSingleLineDrawing(event);
         case DrawingMode::Polyline:
+            qDebug() << "Handling polyline drawing";
             return handlePolylineDrawing(event);
         case DrawingMode::Selection:
+            qDebug() << "Handling selection";
             return handleSelection(event);
         case DrawingMode::Edit:
+            qDebug() << "Handling editing";
             return handleEditing(event);
+        case DrawingMode::None:
+            qDebug() << "Drawing mode is None - not handling event";
+            return false;
         default:
+            qDebug() << "Unknown drawing mode:" << static_cast<int>(m_currentDrawingMode);
             return false;
     }
 }
@@ -1111,9 +1140,17 @@ bool LineDrawingTool::handleKeyPressEvent(QKeyEvent* event)
 // 事件处理辅助方法的具体实现
 bool LineDrawingTool::handleSingleLineDrawing(QMouseEvent* event)
 {
+    qDebug() << "=== handleSingleLineDrawing ===";
+    qDebug() << "Event button:" << event->button();
+    qDebug() << "Left button:" << Qt::LeftButton;
+    qDebug() << "Is drawing:" << m_isDrawing;
+
     if (event->button() == Qt::LeftButton) {
         QVector2D screenPos(event->position().x(), event->position().y());
+        qDebug() << "Screen position:" << screenPos;
+
         QVector3D worldPos = screenToWorld(screenPos);
+        qDebug() << "World position:" << worldPos;
 
         if (!m_isDrawing) {
             // 开始绘制新线段
@@ -1121,12 +1158,16 @@ bool LineDrawingTool::handleSingleLineDrawing(QMouseEvent* event)
             m_currentStartPoint = worldPos;
             emit operationStarted("开始绘制单线段");
             qDebug() << "Single line drawing started at:" << worldPos;
+            qDebug() << "Now in drawing state, waiting for second click";
         } else {
             // 完成线段绘制
             m_currentEndPoint = worldPos;
+            qDebug() << "Completing line segment from" << m_currentStartPoint << "to" << m_currentEndPoint;
 
             // 检查线段长度是否有效
             float length = m_currentStartPoint.distanceToPoint(m_currentEndPoint);
+            qDebug() << "Line segment length:" << length;
+
             if (length < 0.001f) {
                 qDebug() << "Line segment too short, ignoring";
                 m_isDrawing = false;
@@ -1134,6 +1175,7 @@ bool LineDrawingTool::handleSingleLineDrawing(QMouseEvent* event)
             }
 
             // 创建线段
+            qDebug() << "Creating line segment...";
             int segmentId = addLineSegment(m_currentStartPoint, m_currentEndPoint, -1, "单线段");
 
             m_isDrawing = false;
@@ -1470,12 +1512,31 @@ bool LineDrawingTool::isPointNearEndpoint(const QVector2D& screenPoint, int segm
     return false;
 }
 
+void LineDrawingTool::setCoordinateConverter(std::function<QVector3D(const QVector2D&)> screenToWorldFunc,
+                                             std::function<QVector2D(const QVector3D&)> worldToScreenFunc)
+{
+    m_externalScreenToWorld = screenToWorldFunc;
+    m_externalWorldToScreen = worldToScreenFunc;
+    qDebug() << "External coordinate converters set for LineDrawingTool";
+}
+
 QVector3D LineDrawingTool::screenToWorld(const QVector2D& screenPoint) const
 {
-    // 简化的屏幕到世界坐标转换
-    // 在实际应用中，这需要与3D渲染系统的投影矩阵集成
+    qDebug() << "=== LineDrawingTool::screenToWorld ===";
+    qDebug() << "Input screen point:" << screenPoint;
 
+    // 优先使用外部坐标转换函数（来自渲染系统）
+    if (m_externalScreenToWorld) {
+        QVector3D result = m_externalScreenToWorld(screenPoint);
+        qDebug() << "Using external converter, result:" << result;
+        return result;
+    }
+
+    qDebug() << "Using fallback coordinate conversion";
+
+    // 回退到简化的屏幕到世界坐标转换
     if (!m_parentWidget) {
+        qDebug() << "No parent widget, returning screen coordinates as world";
         return QVector3D(screenPoint.x(), screenPoint.y(), 0.0f);
     }
 
@@ -1484,25 +1545,38 @@ QVector3D LineDrawingTool::screenToWorld(const QVector2D& screenPoint) const
     float height = m_parentWidget->height();
 
     if (width <= 0 || height <= 0) {
+        qDebug() << "Invalid widget dimensions:" << width << "x" << height;
         return QVector3D(screenPoint.x(), screenPoint.y(), 0.0f);
     }
+
+    qDebug() << "Widget dimensions:" << width << "x" << height;
 
     // 将屏幕坐标转换为标准化设备坐标 (-1 到 1)
     float x = (2.0f * screenPoint.x() / width) - 1.0f;
     float y = 1.0f - (2.0f * screenPoint.y() / height);
 
+    qDebug() << "Normalized device coordinates:" << x << "," << y;
+
     // 简化的世界坐标转换（假设俯视图，Z=0）
-    // 在实际应用中需要考虑相机位置、投影矩阵等
+    // 使用固定的视野范围，这应该与渲染器的设置一致
     float worldX = x * 50.0f; // 假设视野范围为100单位
     float worldY = y * 50.0f;
     float worldZ = 0.0f;      // 俯视图，所有点在Z=0平面
 
-    return QVector3D(worldX, worldY, worldZ);
+    QVector3D result(worldX, worldY, worldZ);
+    qDebug() << "Fallback conversion result:" << result;
+
+    return result;
 }
 
 QVector2D LineDrawingTool::worldToScreen(const QVector3D& worldPoint) const
 {
-    // 简化的世界到屏幕坐标转换
+    // 优先使用外部坐标转换函数（来自渲染系统）
+    if (m_externalWorldToScreen) {
+        return m_externalWorldToScreen(worldPoint);
+    }
+
+    // 回退到简化的世界到屏幕坐标转换
     // 在实际应用中，这需要与3D渲染系统的投影矩阵集成
 
     if (!m_parentWidget) {
@@ -1538,8 +1612,10 @@ void LineDrawingTool::updatePolylineIndices()
 
 void LineDrawingTool::updateVisualFeedback()
 {
-    // 更新视觉反馈
-    // 具体实现需要与渲染系统集成
+    // 发出信号通知需要重新渲染
+    emit visualFeedbackUpdateRequested();
+
+    qDebug() << "Visual feedback update requested - segments:" << m_lineSegments.size();
 }
 
 void LineDrawingTool::highlightSegment(int segmentId, bool highlight)
