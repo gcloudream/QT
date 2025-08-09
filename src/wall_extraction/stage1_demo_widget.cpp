@@ -3350,21 +3350,6 @@ QPixmap Stage1DemoWidget::drawLineSegmentsOnPixmap(const QPixmap& basePixmap)
         segmentIndex++;
     }
 
-    // 临时调试：绘制一个固定的测试线段，确保绘制流程工作
-    qDebug() << "Drawing test line segment for debugging";
-    QPen testPen(QColor(0, 255, 0), 6); // 绿色，6像素宽
-    painter.setPen(testPen);
-    QPointF testStart(50, 50);
-    QPointF testEnd(pixmapSize.width() - 50, pixmapSize.height() - 50);
-    painter.drawLine(testStart, testEnd);
-
-    // 绘制测试端点
-    painter.setBrush(QBrush(QColor(255, 0, 255))); // 紫色端点
-    painter.drawEllipse(testStart, 8, 8);
-    painter.drawEllipse(testEnd, 8, 8);
-    painter.setBrush(QBrush());
-    qDebug() << "Test line drawn from" << testStart << "to" << testEnd;
-
     painter.end();
 
     qDebug() << "Finished drawing line segments";
